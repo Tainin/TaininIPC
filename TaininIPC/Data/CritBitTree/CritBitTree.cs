@@ -38,30 +38,60 @@ public sealed class CritBitTree<T> {
 
     }
 
+
+    /// <summary>
+    /// Attempts to retrieve the value associated with the specified <paramref name="key"/> 
+    /// from the tree and copy it to the <paramref name="value"/> parameter
+    /// </summary>
+    /// <param name="key">The key associated with the value to get.</param>
+    /// <param name="value">If the <paramref name="key"/> was found, contains the associated value on return.
+    /// Otherwise, the default value of the type of <paramref name="value"/> parameter.</param>
+    /// <returns><c>false</c> if <paramref name="key"/> was not found in the tree. <c>true</c> otherwise</returns>
     public bool TryGetValue(ReadOnlySpan<byte> key, out T? value) {
         if (root is null) return UtilityFunctions.DefaultAndFalse(out value);
 
-        LeafNode leafNode = FindClosestMatch(key);
+        //get the closest match for the given key
+        LeafNode leafNode = FindClosestMatch(key, root);
 
+        //if the keys don't match set the out value to default and return false
         if (!key.SequenceEqual(leafNode.Key.Span)) 
             return UtilityFunctions.DefaultAndFalse(out value);
-        value = leafNode.Value;
+        value = leafNode.Value; //set the out value to the found node's value
         return true;
     }
+
+    /// <summary>
+    /// Checks whether the specified <paramref name="key"/> is present in the tree.
+    /// </summary>
+    /// <param name="key"></param>
+    /// <returns><c>true</c> if <paramref name="key"/> is present in the tree. <c>false</c> otherwise.</returns>
     public bool ContainsKey(ReadOnlySpan<byte> key) {
         if (root == null) return false;
-        LeafNode leafNode = FindClosestMatch(key);
+        //get the closest match for the given key
+        LeafNode leafNode = FindClosestMatch(key, root);
+        //if the keys match return true. false otherwise
         return key.SequenceEqual(leafNode.Key.Span);
     }
+
+    /// <summary>
+    /// Attempts to add the specified key and value to the tree.
+    /// </summary>
+    /// <param name="key">The key of the element to add.</param>
+    /// <param name="value">The value of the element to add.</param>
+    /// <returns><c>false</c> if <paramref name="key"/> was already present in the tree. <c>true</c> otherwise.</returns>
     public bool Add(ReadOnlyMemory<byte> key, T value) {
+        //if root is null insert the new key and value as root
         if (root is null) {
             root = new LeafNode(key, value);
             return true;
         }
+
+        //initialize variables from the given key
         ReadOnlySpan<byte> keySpan = key.Span;
         int keyLength = keySpan.Length;
 
-        LeafNode leafNode = FindClosestMatch(keySpan);
+        //find closest match for the given key
+        LeafNode leafNode = FindClosestMatch(keySpan, root);
         ReadOnlySpan<byte> leafKeySpan = leafNode.Key.Span;
         int leafKeyLength = leafKeySpan.Length;
 
@@ -69,13 +99,16 @@ public sealed class CritBitTree<T> {
         uint newMask = 0;
         bool foundBranchPoint = false;
 
+        //loop through the bytes of the given key
         for (branchIndex = 0; branchIndex < keyLength; branchIndex++) {
+            //if the new key is longer than it's closest match the branch index is the first byte past the end of the leaf key
             if (branchIndex >= leafKeyLength) {
                 newMask = keySpan[branchIndex];
                 foundBranchPoint = true;
                 break;
             }
 
+            //otherwise the branch index that of the first byte which is not equal between the two keys
             if (leafKeySpan[branchIndex] != keySpan[branchIndex]) {
                 newMask = (uint) (leafKeySpan[branchIndex] ^ keySpan[branchIndex]);
                 foundBranchPoint = true;
@@ -83,108 +116,181 @@ public sealed class CritBitTree<T> {
             }
         }
 
+        //if no branch point could be found the key is already present
         if (!foundBranchPoint) return false;
 
+        //set all bits at and to the right of left most set bit
         newMask |= newMask >> 1;
         newMask |= newMask >> 2;
         newMask |= newMask >> 4;
+
+        //unset left most set bit and set all others
         newMask = (newMask & ~(newMask >> 1)) ^ 0xFF;
 
-        byte criticalByte = branchIndex < leafKeyLength ? leafKeySpan[branchIndex] : (byte)0;
+        //get critical byte from key
+        byte criticalByte = keySpan[branchIndex];
+        //the direction of the new node can be extracted from the critical byte using the new nodes mask
         uint newDirection = (1 + (newMask | criticalByte)) >> 8;
 
+        //initialize loop variables
         INode curr = root;
         InternalNode? parent = null;
         int parentDirection = -1;
 
+        //loop until any of the following occur
+        //  1. curr is a LeafNode
+        //  2. currInternal.Index is greater than branchIndex
+        //  3. currInternal.Index and branchIndex are equal but currInternal has a higher mask value 
         while (curr is InternalNode currInternal) {
             if (currInternal.Index > branchIndex) break;
             if (currInternal.Index == branchIndex && currInternal.Mask > newMask) break;
 
+            //get the byte of the key at the index specified in the current node. 0 if index out of range.
             criticalByte = currInternal.Index < keyLength ? keySpan[currInternal.Index] : (byte)0;
-
+            //the direction can be extracted from the critical byte using the mask of the current node.
             int direction = (1 + (currInternal.Mask | criticalByte)) >> 8;
-            parent = currInternal;
-            parentDirection = direction;
+
+            //shift parent and parentDirection down
+            (parent, parentDirection) = (currInternal, direction);
+
+            //move down the tree based on the direction
             curr = direction == 0 ? currInternal.Left : currInternal.Right;
         }
+
+        //create new LeafNode with the specified key and value
         LeafNode newLeaf = new(key, value);
 
-        (INode left, INode right) = newDirection == 0 ? (curr, (INode)newLeaf) : (newLeaf, curr);
+        //determine the new siblings positions based on newDirection
+        (INode left, INode right) = newDirection == 0 ? ((INode)newLeaf, curr) : (curr, newLeaf);
+
+        //create the critical parent for the new siblings
         InternalNode newNode = new(left, right, (byte)branchIndex, (byte)newMask);
 
+        //if parent is null the new critical parent is the root
         if (parent is null) {
             root = newNode;
             return true;
         }
 
+        //determine the critical parents position based on parentDirection
         if (parentDirection == 0) parent.Left = newNode;
         else parent.Right = newNode;
         return true;
     }
+
+    /// <summary>
+    /// Attempts to change the value associated with <paramref name="key"/>.
+    /// </summary>
+    /// <param name="key">The key which should have it's value updated.</param>
+    /// <param name="newValue">The new value.</param>
+    /// <returns><c>false</c> if <paramref name="key"/> was not found in the tree. <c>true</c> otherwise.</returns>
     public bool Update(ReadOnlySpan<byte> key, T newValue) {
         if (root is null) return false;
 
-        LeafNode leafNode = FindClosestMatch(key);
+        //get the closest match for the given key
+        LeafNode leafNode = FindClosestMatch(key, root);
+        //if the keys don't match there is no match anywhere in the tree
         if (!key.SequenceEqual(leafNode.Key.Span)) return false;
 
-        leafNode.Value = newValue;
+        leafNode.Value = newValue; //update the value
         return true;
     }
+
+    /// <summary>
+    /// Attempts to remove an element from the tree and copy it's <c>Value</c> to the <paramref name="value"/> parameter.
+    /// </summary>
+    /// <param name="key">The key of the element to remove.</param>
+    /// <param name="value">If present, the <c>Value</c> associated with the given <paramref name="key"/>.
+    /// Otherwise the default value of <c>T</c>.</param>
+    /// <returns><c>false</c> if <paramref name="key"/> was not found in the tree. <c>true</c> otherwise.</returns>
     public bool Pop(ReadOnlySpan<byte> key, out T? value) {
+        //if root is null the given key does not exist in the tree
         if (root is null) return UtilityFunctions.DefaultAndFalse(out value);
 
+
+        //initialize variables
         int keyLength = key.Length;
         (INode curr, INode? parent, INode? grandParent) = (root, null, null);
         (int parentDirection, int grandParentDirection) = (-1, -1);
 
-        while (curr is InternalNode currInternal) {
+        while (curr is InternalNode currInternal) { //loop until leaf node is reached
+            //get the byte of the key at the index specified in the current node. 0 if index out of range.
             byte criticalByte = currInternal.Index < keyLength ? key[currInternal.Index] : (byte)0;
+            //the direction can be extracted from the critical byte using the mask of the current node.
             int direction = (1 + (currInternal.Mask | criticalByte)) >> 8;
 
-            (grandParent, parent) = (parent, curr);
+            //shift parent and grandparent down
+            (grandParent, parent) = (parent, curr); 
             (grandParentDirection, parentDirection) = (parentDirection, direction);
 
+            //move down the tree based on the direction
             curr = direction == 0 ? currInternal.Left : currInternal.Right;
         }
 
-        LeafNode leafNode = (LeafNode)curr;
+        LeafNode leafNode = (LeafNode)curr; //get terminal node
+
+        //return false if the passed key does not match the key that was passed in as there is no match anywhere in the tree
         if (!key.SequenceEqual(leafNode.Key.Span))
             return UtilityFunctions.DefaultAndFalse(out value);
 
-        value = leafNode.Value;
+        value = leafNode.Value; //set out parameter
 
+        //if parent is null there is only one element in the tree. Simply setting root to null will remove it.
         if (parent is null) {
             root = null;
             return true;
         }
 
+        //get the sibling of curr
         INode sibling = parentDirection == 0 ? ((InternalNode)parent).Right : ((InternalNode)parent).Left;
 
+        //if grandParent is null, delete curr by promoting it's sibling to root
         if (grandParent is null) {
             root = sibling;
             return true;
         }
 
+        //delete curr by promoting it's sibling to a child of it's grandparent
         if (grandParentDirection == 0) ((InternalNode)grandParent).Left = sibling;
         else ((InternalNode)grandParent).Right = sibling;
 
         return true;
     }
+
+    /// <summary>
+    /// Attempts to remove an element from the tree.
+    /// </summary>
+    /// <param name="key">The key of the element to remove.</param>
+    /// <returns><c>false</c> if <paramref name="key"/> was not found in the tree. <c>true</c> otherwise.</returns>
     public bool Remove(ReadOnlySpan<byte> key) => Pop(key, out _);
+
+    /// <summary>
+    /// Clears all contents of the tree.
+    /// </summary>
     public void Clear() => root = null;
 
-    private LeafNode FindClosestMatch(ReadOnlySpan<byte> key) {
-        INode curr = root!;
+
+
+    /// <summary>
+    /// Locates the <see cref="LeafNode"/> which is closest to where <paramref name="key"/> would appear in the tree.
+    /// If <paramref name="key"/> is present in the tree it's associated <see cref="LeafNode"/> is the located node.
+    /// </summary>
+    /// <param name="key">The key to use search for.</param>
+    /// <param name="node">The <see cref="INode"/> to start at.</param>
+    /// <returns>The located <see cref="LeafNode"/>.</returns>
+    private static LeafNode FindClosestMatch(ReadOnlySpan<byte> key, INode node) {
         int keyLength = key.Length;
 
-        while (curr is InternalNode currInternal) {
+        while (node is InternalNode currInternal) { //Loop until leaf node is reached
+            //get the byte of the key at the index specified in the current node. 0 if index out of range.
             byte criticalByte = currInternal.Index < keyLength ? key[currInternal.Index] : (byte)0;
+            //the direction can be extracted from the critical byte using the mask of the current node.
             int direction = (1 + (currInternal.Mask | criticalByte)) >> 8;
-            curr = direction == 0 ? currInternal.Left : currInternal.Right;
+            //move down the tree based on the direction
+            node = direction == 0 ? currInternal.Left : currInternal.Right;
         }
 
-        return (LeafNode)curr;
+        return (LeafNode)node; //return the terminal node 
     }
 
     //TODO: REMOVE THIS

@@ -71,6 +71,10 @@ public sealed class CritBitTree<T> {
     /// Gets an enumerable over all of the values in the tree in left to right depth first order.
     /// </summary>
     public IEnumerable<T> Values => GetLeafNodes(root).Select(t => t.Value);
+    /// <summary>
+    /// Gets an enumerable over all of the key value pairs in the tree in left to right depth first order.
+    /// </summary>
+    public IEnumerable<(ReadOnlyMemory<byte> Key, T Value)> Pairs => GetLeafNodes(root).Select(t => (t.Key, t.Value));
 
     private INode? root;
 

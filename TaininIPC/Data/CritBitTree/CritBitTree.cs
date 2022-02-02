@@ -4,14 +4,35 @@ using TaininIPC.Utils;
 namespace TaininIPC.Data.CritBitTree;
 
 public sealed class CritBitTree<T> {
+    /// <summary>
+    /// Marker interface to give node types a common parent type.
+    /// This is probably not a best practive however it does a good job of providing discriminated union
+    /// like semantics and since all types are private nested members I'm allowing it.
+    /// </summary>
     private interface INode { }
 
+    /// <summary>
+    /// Represents an internal (non-leaf) node of a <see cref="CritBitTree{T}"/>
+    /// </summary>
     [StructLayout(LayoutKind.Auto, Pack = 1)]
     private sealed class InternalNode : INode {
+        /// <summary>
+        /// The left child of the node.
+        /// </summary>
         public INode Left { get; set; }
+        /// <summary>
+        /// The right child of the node.
+        /// </summary>
         public INode Right { get; set; }
 
+        /// <summary>
+        /// The critical index at which the keys of the children of the node differ.
+        /// </summary>
         public byte Index { get; }
+        /// <summary>
+        /// The mask for the critical byte of the key.
+        /// The bit which differs between the children's keys are unset -- all other bits are set.
+        /// </summary>
         public byte Mask { get; }
 
         public InternalNode(INode left, INode right, byte index, byte mask) {
@@ -21,9 +42,19 @@ public sealed class CritBitTree<T> {
             Mask = mask;
         }
     }
+
+    /// <summary>
+    /// Represents a leaf (value containing) node of a <see cref="CritBitTree{T}"/>
+    /// </summary>
     [StructLayout(LayoutKind.Auto, Pack = 1)]
     private sealed class LeafNode : INode {
+        /// <summary>
+        /// The full key associated with the node.
+        /// </summary>
         public ReadOnlyMemory<byte> Key { get; }
+        /// <summary>
+        /// The value associated with the node.
+        /// </summary>
         public T Value { get; set; }
 
         public LeafNode(ReadOnlyMemory<byte> key, T value) {
@@ -32,12 +63,18 @@ public sealed class CritBitTree<T> {
         }
     }
 
+    /// <summary>
+    /// Gets an enumerable over all of the keys in the tree in left to right depth first order.
+    /// </summary>
+    public IEnumerable<ReadOnlyMemory<byte>> Keys => GetLeafNodes(root).Select(t => t.Key);
+    /// <summary>
+    /// Gets an enumerable over all of the values in the tree in left to right depth first order.
+    /// </summary>
+    public IEnumerable<T> Values => GetLeafNodes(root).Select(t => t.Value);
+
     private INode? root;
 
-    public CritBitTree() {
-
-    }
-
+    public CritBitTree() { }
 
     /// <summary>
     /// Attempts to retrieve the value associated with the specified <paramref name="key"/> 
@@ -47,7 +84,7 @@ public sealed class CritBitTree<T> {
     /// <param name="value">If the <paramref name="key"/> was found, contains the associated value on return.
     /// Otherwise, the default value of the type of <paramref name="value"/> parameter.</param>
     /// <returns><c>false</c> if <paramref name="key"/> was not found in the tree. <c>true</c> otherwise</returns>
-    public bool TryGetValue(ReadOnlySpan<byte> key, out T? value) {
+    public bool TryGet(ReadOnlySpan<byte> key, out T? value) {
         if (root is null) return UtilityFunctions.DefaultAndFalse(out value);
 
         //get the closest match for the given key
@@ -79,7 +116,7 @@ public sealed class CritBitTree<T> {
     /// <param name="key">The key of the element to add.</param>
     /// <param name="value">The value of the element to add.</param>
     /// <returns><c>false</c> if <paramref name="key"/> was already present in the tree. <c>true</c> otherwise.</returns>
-    public bool Add(ReadOnlyMemory<byte> key, T value) {
+    public bool TryAdd(ReadOnlyMemory<byte> key, T value) {
         //if root is null insert the new key and value as root
         if (root is null) {
             root = new LeafNode(key, value);
@@ -184,7 +221,7 @@ public sealed class CritBitTree<T> {
     /// <param name="key">The key which should have it's value updated.</param>
     /// <param name="newValue">The new value.</param>
     /// <returns><c>false</c> if <paramref name="key"/> was not found in the tree. <c>true</c> otherwise.</returns>
-    public bool Update(ReadOnlySpan<byte> key, T newValue) {
+    public bool TryUpdate(ReadOnlySpan<byte> key, T newValue) {
         if (root is null) return false;
 
         //get the closest match for the given key
@@ -203,7 +240,7 @@ public sealed class CritBitTree<T> {
     /// <param name="value">If present, the <c>Value</c> associated with the given <paramref name="key"/>.
     /// Otherwise the default value of <c>T</c>.</param>
     /// <returns><c>false</c> if <paramref name="key"/> was not found in the tree. <c>true</c> otherwise.</returns>
-    public bool Pop(ReadOnlySpan<byte> key, out T? value) {
+    public bool TryPop(ReadOnlySpan<byte> key, out T? value) {
         //if root is null the given key does not exist in the tree
         if (root is null) return UtilityFunctions.DefaultAndFalse(out value);
 
@@ -262,14 +299,12 @@ public sealed class CritBitTree<T> {
     /// </summary>
     /// <param name="key">The key of the element to remove.</param>
     /// <returns><c>false</c> if <paramref name="key"/> was not found in the tree. <c>true</c> otherwise.</returns>
-    public bool Remove(ReadOnlySpan<byte> key) => Pop(key, out _);
+    public bool TryRemove(ReadOnlySpan<byte> key) => TryPop(key, out _);
 
     /// <summary>
     /// Clears all contents of the tree.
     /// </summary>
     public void Clear() => root = null;
-
-
 
     /// <summary>
     /// Locates the <see cref="LeafNode"/> which is closest to where <paramref name="key"/> would appear in the tree.
@@ -291,6 +326,28 @@ public sealed class CritBitTree<T> {
         }
 
         return (LeafNode)node; //return the terminal node 
+    }
+    /// <summary>
+    /// Gets an enumerable over all of the leaf nodes in the tree in left to right depth first order.
+    /// </summary>
+    /// <param name="start">The root of the traverse.</param>
+    /// <returns>An enumerable over all of the leaf nodes.</returns>
+    private static IEnumerable<LeafNode> GetLeafNodes(INode? start) {
+        if (start is null) yield break;
+
+        Stack<INode> traversal = new();
+        traversal.Push(start);
+
+        while (traversal.Count > 0) {
+            INode node = traversal.Pop();
+
+            if (node is LeafNode leafNode) yield return leafNode;
+
+            if (node is InternalNode internalNode) {
+                if (internalNode.Right is not null) traversal.Push(internalNode.Right);
+                if (internalNode.Left is not null) traversal.Push(internalNode.Left);
+            }
+        }
     }
 
     //TODO: REMOVE THIS

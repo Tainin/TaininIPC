@@ -9,15 +9,16 @@ public sealed class MultiFrame {
 
     public MultiFrame() => subFrames = new();
 
-    public IEnumerable<Frame> SubFrames => subFrames.Values;
-    public IEnumerable<short> Keys => 
-        subFrames.Keys.Select(rom => GetId(rom.Span));
-    public IEnumerable<(Frame Frame, short Key)> Pairs =>
-        subFrames.Pairs.Select(pair => (pair.Value, GetId(pair.Key.Span)));
+    public IEnumerable<(ReadOnlyMemory<byte> Key, Frame Frame)> Serialized => subFrames.Pairs;
 
     public Frame Create(short id) {
         Frame frame = new();
         if (subFrames.TryAdd(GetKey(id), frame)) return frame;
+        else throw new InvalidOperationException();
+    }
+    public Frame Create(ReadOnlyMemory<byte> key) {
+        Frame frame = new();
+        if (subFrames.TryAdd(key[..sizeof(short)], frame)) return frame;
         else throw new InvalidOperationException();
     }
     public Frame Get(short id) => subFrames.TryGet(GetKey(id).Span, out Frame? frame) ? frame! : 
@@ -34,6 +35,4 @@ public sealed class MultiFrame {
         BinaryPrimitives.WriteInt16BigEndian(key, id);
         return key;
     }
-    private static short GetId(ReadOnlySpan<byte> key) =>
-        BinaryPrimitives.ReadInt16BigEndian(key);
 }

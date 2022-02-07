@@ -16,6 +16,15 @@ public sealed class Frame {
         postEnd = new(ReadOnlyMemory<byte>.Empty);
         (preStart.Next, postEnd.Previous) = (postEnd, preStart);
     }
+    public IEnumerable<ReadOnlyMemory<byte>> Serialized {
+        get {
+            Node curr = preStart.Next!;
+            while (!ReferenceEquals(curr, postEnd)) {
+                yield return curr.Data;
+                curr = curr.Next!;
+            }
+        }
+    }
     public void Insert(ReadOnlyMemory<byte> data, Index index) {
         Node newNode = new(data);
 

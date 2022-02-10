@@ -1,5 +1,5 @@
-﻿using TaininIPC.Data.Serialized;
-using TaininIPC.Network.Protocol;
+﻿using TaininIPC.Data.Protocol;
+using TaininIPC.Data.Serialized;
 
 namespace TaininIPC.Network;
 

@@ -82,7 +82,7 @@ public class FrameEndpoint {
 
     public async Task SendMultiFrame(MultiFrame multiFrame) {
         try {
-            await sendSemaphore.WaitAsync();
+            await sendSemaphore.WaitAsync().ConfigureAwait(false);
             await outgoingChunkHandler(NetworkChunk.StartMultiFrame).ConfigureAwait(false);
             foreach ((ReadOnlyMemory<byte> key, Frame frame) in multiFrame.Serialized) {
                 await outgoingChunkHandler(NetworkChunk.StartFrame(key)).ConfigureAwait(false);

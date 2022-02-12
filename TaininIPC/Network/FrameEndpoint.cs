@@ -13,17 +13,17 @@ public class FrameEndpoint {
         Error,
     }
 
-    private readonly Func<NetworkChunk, Task> outgoingChunkHandler;
-    private readonly Func<MultiFrame, Task> incomingFrameHandler;
+    private readonly ChunkHandler outgoingChunkHandler;
+    private readonly MultiFrameHandler incomingMultiFrameHandler;
     private readonly SemaphoreSlim sendSemaphore;
 
     private MultiFrame workingMultiFrame = null!;
     private Frame workingFrame = null!;
     private IncomingFrameState incomingFrameState;
 
-    public FrameEndpoint(Func<NetworkChunk, Task> outgoingChunkHandler, Func<MultiFrame, Task> incomingFrameHandler) {
+    public FrameEndpoint(ChunkHandler outgoingChunkHandler, MultiFrameHandler incomingMultiFrameHandler) {
         this.outgoingChunkHandler = outgoingChunkHandler;
-        this.incomingFrameHandler = incomingFrameHandler;
+        this.incomingMultiFrameHandler = incomingMultiFrameHandler;
         sendSemaphore = new(1, 1);
 
         incomingFrameState = IncomingFrameState.None;
@@ -34,19 +34,17 @@ public class FrameEndpoint {
             IncomingFrameState.None => ExpectStartMultiFrame(chunk),
             IncomingFrameState.MultiFrame => InMultiFrameHandler(chunk),
             IncomingFrameState.Frame => InFrameHandler(chunk),
-            _ => UnknownStateHandler(chunk),
+            _ => IncomingFrameState.Error,
         };
 
         if (incomingFrameState == IncomingFrameState.Complete) {
-            await incomingFrameHandler(workingMultiFrame).ConfigureAwait(false);
+            await incomingMultiFrameHandler(workingMultiFrame).ConfigureAwait(false);
             incomingFrameState = IncomingFrameState.None;
         }
 
         if (incomingFrameState == IncomingFrameState.Error)
             throw new InvalidOperationException();
     }
-
-    private IncomingFrameState UnknownStateHandler(NetworkChunk chunk) => IncomingFrameState.Error;
 
     private IncomingFrameState ExpectStartMultiFrame(NetworkChunk chunk) {
         if (chunk.Instruction != Instructions.StartMultiFrame) 

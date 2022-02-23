@@ -1,4 +1,5 @@
-﻿using TaininIPC.Data.Protocol;
+﻿using TaininIPC.Client;
+using TaininIPC.Data.Protocol;
 using TaininIPC.Data.Serialized;
 
 namespace TaininIPC.Network;
@@ -14,16 +15,16 @@ public class FrameEndpoint {
     }
 
     private readonly ChunkHandler outgoingChunkHandler;
-    private readonly MultiFrameHandler incomingMultiFrameHandler;
+    private readonly MultiFrameHandler incomingFrameHandler;
     private readonly SemaphoreSlim sendSemaphore;
 
     private MultiFrame workingMultiFrame = null!;
     private Frame workingFrame = null!;
     private IncomingFrameState incomingFrameState;
 
-    public FrameEndpoint(ChunkHandler outgoingChunkHandler, MultiFrameHandler incomingMultiFrameHandler) {
+    public FrameEndpoint(ChunkHandler outgoingChunkHandler, MultiFrameHandler incomingFrameHandler) {
         this.outgoingChunkHandler = outgoingChunkHandler;
-        this.incomingMultiFrameHandler = incomingMultiFrameHandler;
+        this.incomingFrameHandler = incomingFrameHandler;
         sendSemaphore = new(1, 1);
 
         incomingFrameState = IncomingFrameState.None;
@@ -38,7 +39,7 @@ public class FrameEndpoint {
         };
 
         if (incomingFrameState == IncomingFrameState.Complete) {
-            await incomingMultiFrameHandler(workingMultiFrame).ConfigureAwait(false);
+            await incomingFrameHandler(workingMultiFrame).ConfigureAwait(false);
             incomingFrameState = IncomingFrameState.None;
         }
 
@@ -47,7 +48,7 @@ public class FrameEndpoint {
     }
 
     private IncomingFrameState ExpectStartMultiFrame(NetworkChunk chunk) {
-        if (chunk.Instruction != Instructions.StartMultiFrame) 
+        if (chunk.Instruction != Instructions.StartMultiFrame)
             return IncomingFrameState.Error;
 
         workingMultiFrame = new();
@@ -81,16 +82,21 @@ public class FrameEndpoint {
     public async Task SendMultiFrame(MultiFrame multiFrame) {
         try {
             await sendSemaphore.WaitAsync().ConfigureAwait(false);
-            await outgoingChunkHandler(NetworkChunk.StartMultiFrame).ConfigureAwait(false);
-            foreach ((ReadOnlyMemory<byte> key, Frame frame) in multiFrame.Serialized) {
-                await outgoingChunkHandler(NetworkChunk.StartFrame(key)).ConfigureAwait(false);
-                foreach (ReadOnlyMemory<byte> buffer in frame.Serialized)
-                    await outgoingChunkHandler(NetworkChunk.AppendBuffer(buffer)).ConfigureAwait(false);
-                await outgoingChunkHandler(NetworkChunk.EndFrame).ConfigureAwait(false);
-            }
-            await outgoingChunkHandler(NetworkChunk.EndMultiFrame).ConfigureAwait(false);
+            foreach (NetworkChunk chunk in SerializeMultiFrame(multiFrame))
+                await outgoingChunkHandler(chunk).ConfigureAwait(false);
         } finally {
             sendSemaphore.Release();
         }
+    }
+
+    private static IEnumerable<NetworkChunk> SerializeMultiFrame(MultiFrame multiFrame) {
+        yield return NetworkChunk.StartMultiFrame;
+        foreach ((ReadOnlyMemory<byte> key, Frame frame) in multiFrame.Serialized) {
+            yield return NetworkChunk.StartFrame(key);
+            foreach (ReadOnlyMemory<byte> buffer in frame.Serialized)
+                yield return NetworkChunk.AppendBuffer(buffer);
+            yield return NetworkChunk.EndFrame;
+        }
+        yield return NetworkChunk.EndMultiFrame;
     }
 }

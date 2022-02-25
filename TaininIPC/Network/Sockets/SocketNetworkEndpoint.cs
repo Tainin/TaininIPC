@@ -32,6 +32,7 @@ public sealed class SocketNetworkEndpoint : INetworkEndpoint {
 
     private readonly CancellationTokenSource cancellationTokenSource;
     private readonly SemaphoreSlim keepAliveBeginSemaphore;
+    private readonly SemaphoreSlim disconnectSemaphore;
     private readonly SemaphoreSlim sendSemaphore;
 
     private int status;
@@ -46,6 +47,7 @@ public sealed class SocketNetworkEndpoint : INetworkEndpoint {
 
         cancellationTokenSource = new CancellationTokenSource();
         keepAliveBeginSemaphore = new(0, 1);
+        disconnectSemaphore = new(0, 1);
         sendSemaphore = new(1, 1);
         UpdateStatus(EndpointStatus.Unstarted, Status);
     }
@@ -54,68 +56,74 @@ public sealed class SocketNetworkEndpoint : INetworkEndpoint {
         if (!UpdateStatus(EndpointStatus.Starting, EndpointStatus.Unstarted))
             throw new InvalidOperationException($"Cannot start a {nameof(SocketNetworkEndpoint)} which is already running.");
 
-        await SendChunkInternal(new(INITIAL_FLAG, ReadOnlyMemory<byte>.Empty)).ConfigureAwait(false);
-        (NetworkChunk receivedInitialization, bool isExternal) = await ReceiveChunk().ConfigureAwait(false);
+        await InitializeConncetion().ConfigureAwait(false);
 
-        if (isExternal) 
-            throw new IOException("Failed to start. Chunk received during initialization should have originated internally");
+        Task[] lifetimeTasks = new Task[] { KeepAliveService(), ReceiveService(), TimeoutService(), DisconnectService() };
+        Task firstToFinish = await Task.WhenAny(lifetimeTasks).ConfigureAwait(false);
+        if (firstToFinish.IsFaulted) UpdateStatus(EndpointStatus.Faulted, EndpointStatus.Running);
 
-        if (receivedInitialization.Instruction != INITIAL_FLAG)
-            throw new IOException("Failed to start. Chunk received during initialization should contain initialization instruction.");
-
-        if (receivedInitialization.Data.Length > 0)
-            throw new IOException("Failed to start. Chunk received during initialization should not contain data.");
-
-        UpdateStatus(EndpointStatus.Running, EndpointStatus.Starting);
-
-        Task[] lifetimeTasks = new Task[] { KeepAliveLoop(), ReceiveLoop(), TimeoutLoop() };
-
-        await Task.WhenAny(lifetimeTasks).ConfigureAwait(false);
-        UpdateStatus(EndpointStatus.Faulted, EndpointStatus.Running);
+        disconnectSemaphore.Release();
+        cancellationTokenSource.Cancel();
 
         Exception? exception = null;
 
         try {
-            await SendChunkInternal(new(DISCONNECT_FLAG, ReadOnlyMemory<byte>.Empty)).ConfigureAwait(false);
+            await Task.WhenAll(lifetimeTasks).ConfigureAwait(false);
         } catch (Exception ex) {
             if (Status is EndpointStatus.Faulted) exception = ex;
         }
-        
-        StopSocketServices();
 
-        try {
-            await Task.WhenAll(lifetimeTasks).ConfigureAwait(false);
-        } catch (Exception ex) {
-            if (Status is EndpointStatus.Faulted) 
-                exception = exception is null ? ex : new AggregateException(exception, ex);
-        }
+        UpdateStatus(EndpointStatus.Stopped, EndpointStatus.Running);
 
         try {
             connection.Shutdown(SocketShutdown.Both);
         } catch (Exception ex) {
             exception = exception is null ? ex : new AggregateException(exception, ex);
-        } finally {
-            connection.Close();
         }
 
-        if (exception is null) return;
-        else throw exception;
-    }
+        connection.Close();
 
+        if (exception is not null) throw exception;
+    }
     public void StopSocketServices() {
         UpdateStatus(EndpointStatus.Stopped, EndpointStatus.Running);
         cancellationTokenSource.Cancel();
     }
+    public async Task SendChunk(NetworkChunk chunk) {
+        if (Status is not EndpointStatus.Running) throw new InvalidOperationException("Cannot send throug an endpoint which isn't running.");
+        await SendChunkInternal(chunk, external: true).ConfigureAwait(false);
+    }
 
-    private async Task KeepAliveLoop() {
+    private async Task InitializeConncetion() {
+        await SendChunkInternal(new(INITIAL_FLAG, ReadOnlyMemory<byte>.Empty)).ConfigureAwait(false);
+        (NetworkChunk receivedInitialization, bool isExternal) = await ReceiveChunk().ConfigureAwait(false);
+
+        string? message = null;
+
+        if (isExternal)
+            message = "Failed to start. Chunk received during initialization should have originated internally";
+
+        if (receivedInitialization.Instruction != INITIAL_FLAG)
+            message = "Failed to start. Chunk received during initialization should contain initialization instruction.";
+
+        if (receivedInitialization.Data.Length > 0)
+            message = "Failed to start. Chunk received during initialization should not contain data.";
+
+        if (message is not null) {
+            UpdateStatus(EndpointStatus.Faulted, EndpointStatus.Starting);
+            throw new IOException(message);
+        }
+
+        UpdateStatus(EndpointStatus.Running, EndpointStatus.Starting);
+    }
+    private async Task KeepAliveService() {
         await SendChunkInternal(new((byte)(KEEP_ALIVE_FLAG | INITIAL_FLAG), ReadOnlyMemory<byte>.Empty)).ConfigureAwait(false);
         while (Status is EndpointStatus.Running) {
             await SendChunkInternal(new(KEEP_ALIVE_FLAG, ReadOnlyMemory<byte>.Empty)).ConfigureAwait(false);
             await Task.Delay(timeoutOptions.Period, cancellationTokenSource.Token).ConfigureAwait(false);
         }
     }
-
-    private async Task ReceiveLoop() {
+    private async Task ReceiveService() {
         while (Status is EndpointStatus.Running) {
             (NetworkChunk chunk, bool isExternal) = await ReceiveChunk().ConfigureAwait(false);
 
@@ -123,8 +131,7 @@ public sealed class SocketNetworkEndpoint : INetworkEndpoint {
             else HandleInternalChunk(chunk);
         }
     }
-
-    private async Task TimeoutLoop() {
+    private async Task TimeoutService() {
         await keepAliveBeginSemaphore.WaitAsync(cancellationTokenSource.Token).ConfigureAwait(false);
         while (Status is EndpointStatus.Running) {
             long now = DateTime.UtcNow.Ticks;
@@ -136,7 +143,10 @@ public sealed class SocketNetworkEndpoint : INetworkEndpoint {
             await Task.Delay(delay, cancellationTokenSource.Token).ConfigureAwait(false);
         }
     }
-
+    private async Task DisconnectService() {
+        await disconnectSemaphore.WaitAsync().ConfigureAwait(false);
+        await SendChunkInternal(new(DISCONNECT_FLAG, ReadOnlyMemory<byte>.Empty)).ConfigureAwait(false);
+    }
     private void HandleInternalChunk(NetworkChunk chunk) {
         if ((chunk.Instruction & KEEP_ALIVE_FLAG) != 0) {
             long expiresAt = (DateTime.UtcNow + timeoutOptions.Timeout).Ticks;
@@ -145,18 +155,6 @@ public sealed class SocketNetworkEndpoint : INetworkEndpoint {
             if ((chunk.Instruction & INITIAL_FLAG) != 0) keepAliveBeginSemaphore.Release();
         } else if (chunk.Instruction == DISCONNECT_FLAG) StopSocketServices();
     }
-
-    public async Task SendChunk(NetworkChunk chunk) {
-        if (Status is not EndpointStatus.Running) throw new InvalidOperationException("Cannot send throug an endpoint which isn't running.");
-        try {
-            await SendChunkInternal(chunk, external: true).ConfigureAwait(false);
-        } catch {
-            UpdateStatus(EndpointStatus.Faulted, EndpointStatus.Running);
-            StopSocketServices();
-            throw;
-        }
-    }
-
     private async Task SendChunkInternal(NetworkChunk chunk, bool external = false) {
         static async Task SendBuffer(Socket socket, ReadOnlyMemory<byte> buffer) {
             int offset = 0;

@@ -44,6 +44,18 @@ public sealed class Frame {
     }
     public ReadOnlyMemory<byte> Get(Index index) => Find(index, remove: false).Data;
     public ReadOnlyMemory<byte> Pop(Index index) => Find(index, remove: true).Data;
+    public ReadOnlyMemory<byte> Swap(Index index, ReadOnlyMemory<byte> data) { 
+        Node node = Find(index, remove: false);
+        ReadOnlyMemory<byte> oldData = node.Data;
+
+        node.Data = data;
+        return oldData;
+    }
+    public ReadOnlyMemory<byte> Rotate() {
+        ReadOnlyMemory<byte> data = Pop(0);
+        Insert(data, ^1);
+        return data;
+    }
     public void Remove(Index index) => Find(index, remove: true);
     public void Clear() => (preStart.Next, postEnd.Previous) = (postEnd, preStart);
     public bool IsEmpty() => ReferenceEquals(preStart.Next, postEnd) || ReferenceEquals(postEnd.Previous, preStart);

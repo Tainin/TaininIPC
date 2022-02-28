@@ -1,6 +1,5 @@
 ﻿using System.Buffers.Binary;
 using System.Net.Sockets;
-using TaininIPC.Client;
 using TaininIPC.Data.Protocol;
 using TaininIPC.Network.Interface;
 

@@ -1,4 +1,5 @@
 ﻿using TaininIPC.Client.Interface;
+using TaininIPC.Network;
 using TaininIPC.Network.Interface;
 
 namespace TaininIPC.Client;

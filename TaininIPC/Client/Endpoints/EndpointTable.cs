@@ -1,6 +1,6 @@
 ﻿using TaininIPC.Client.Abstract;
 
-namespace TaininIPC.Client;
+namespace TaininIPC.Client.Endpoints;
 
 public sealed class EndpointTable : AbstractTable<EndpointTableEntryOptions, EndpointTableEntry> {
     public EndpointTable(int reservedCount) : base(reservedCount) { }

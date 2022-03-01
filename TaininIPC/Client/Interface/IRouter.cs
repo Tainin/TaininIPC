@@ -1,4 +1,5 @@
-﻿using TaininIPC.Data.Serialized;
+﻿using TaininIPC.Client.Endpoints;
+using TaininIPC.Data.Serialized;
 
 namespace TaininIPC.Client.Interface;
 

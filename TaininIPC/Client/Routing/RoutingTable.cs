@@ -1,8 +1,9 @@
 ﻿using TaininIPC.Client.Abstract;
+using TaininIPC.Client.Endpoints;
 using TaininIPC.Client.Interface;
 using TaininIPC.Data.Serialized;
 
-namespace TaininIPC.Client;
+namespace TaininIPC.Client.Routing;
 
 public sealed class RoutingTable : AbstractTable<IRouter, IRouter>,  IRouter {
 

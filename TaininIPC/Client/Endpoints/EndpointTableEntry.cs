@@ -4,7 +4,7 @@ using TaininIPC.Data.Serialized;
 using TaininIPC.Network;
 using TaininIPC.Network.Interface;
 
-namespace TaininIPC.Client;
+namespace TaininIPC.Client.Endpoints;
 
 public sealed class EndpointTableEntry { 
     public INetworkEndpoint NetworkEndpoint { get; private init; }

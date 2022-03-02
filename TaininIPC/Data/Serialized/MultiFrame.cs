@@ -1,5 +1,5 @@
 ﻿using System.Buffers.Binary;
-using TaininIPC.Data.CritBitTree;
+using TaininIPC.Utils;
 
 namespace TaininIPC.Data.Serialized;
 

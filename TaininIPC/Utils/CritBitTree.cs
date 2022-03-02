@@ -1,7 +1,6 @@
 ﻿using System.Runtime.InteropServices;
-using TaininIPC.Utils;
 
-namespace TaininIPC.Data.CritBitTree;
+namespace TaininIPC.Utils;
 
 public sealed class CritBitTree<T> {
     /// <summary>

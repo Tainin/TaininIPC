@@ -1,6 +1,6 @@
 ﻿using System.Buffers.Binary;
 using TaininIPC.Client.Interface;
-using TaininIPC.Data.CritBitTree;
+using TaininIPC.Utils;
 
 namespace TaininIPC.Client.Abstract;
 

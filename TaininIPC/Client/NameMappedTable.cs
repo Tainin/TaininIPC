@@ -8,8 +8,9 @@ public class NameMappedTable<TableType, TInput, TStored> where TableType : ITabl
     where TInput : notnull where TStored : notnull {
 
     private readonly CritBitTree<int> nameMap;
-    private readonly TableType internalTable;
     private readonly SemaphoreSlim syncSemaphore;
+
+    protected readonly TableType internalTable;
 
     public NameMappedTable(TableType table) {
         (nameMap, syncSemaphore) = (new(), new(1, 1));

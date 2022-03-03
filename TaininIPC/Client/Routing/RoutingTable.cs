@@ -19,6 +19,8 @@ public sealed class RoutingTable : AbstractTable<IRouter, IRouter>,  IRouter {
     }
 }
 
-public sealed class NameMappedRoutingTable : NameMappedTable<RoutingTable, IRouter, IRouter> {
+public sealed class NameMappedRoutingTable : NameMappedTable<RoutingTable, IRouter, IRouter>, IRouter {
     public NameMappedRoutingTable(int reservedCount, RoutingTable.KeyExtractor keyExtractor) : base(new(reservedCount, keyExtractor)) { }
+
+    public Task RouteFrame(MultiFrame frame, EndpointTableEntry origin) => internalTable.RouteFrame(frame, origin);
 }

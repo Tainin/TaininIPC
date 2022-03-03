@@ -18,3 +18,7 @@ public sealed class RoutingTable : AbstractTable<IRouter, IRouter>,  IRouter {
         if (got && router is not null) await router.RouteFrame(frame, origin).ConfigureAwait(false);
     }
 }
+
+public sealed class NameMappedRoutingTable : NameMappedTable<RoutingTable, IRouter, IRouter> {
+    public NameMappedRoutingTable(int reservedCount, RoutingTable.KeyExtractor keyExtractor) : base(new(reservedCount, keyExtractor)) { }
+}

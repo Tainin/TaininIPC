@@ -9,3 +9,7 @@ public sealed class EndpointTable : AbstractTable<EndpointTableEntryOptions, End
         return await AddInternalBase(entry, id).ConfigureAwait(false);
     }
 }
+
+public sealed class NameMappedEndpointTable : NameMappedTable<EndpointTable, EndpointTableEntryOptions, EndpointTableEntry> {
+    public NameMappedEndpointTable(int reservedCount) : base(new(reservedCount)) { }
+}

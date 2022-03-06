@@ -20,8 +20,12 @@ public abstract class AbstractTable<TInput, TStored> : ITable<TInput, TStored> w
     }
     
     public Task<int> Add(TInput input) => AddInternal(input, Interlocked.Increment(ref nextAvailableId));
-    public Task AddReserved(TInput input, int id) => id < firstAvailableId ? AddInternal(input, id) :
-        throw new ArgumentOutOfRangeException(nameof(id), "The provided id is outside the reserved range.");
+    public Task AddReserved(TInput input, int id) {
+        if (id < 0) throw new ArgumentOutOfRangeException(nameof(id), "Ids must not be less than 0.");
+        if (id >= firstAvailableId) throw new ArgumentOutOfRangeException(nameof(id), "The provided id is outside the reserved range.");
+
+        return AddInternal(input, id);
+    }
     public async Task Clear() {
         await syncSemaphore.WaitAsync().ConfigureAwait(false);
         table.Clear();

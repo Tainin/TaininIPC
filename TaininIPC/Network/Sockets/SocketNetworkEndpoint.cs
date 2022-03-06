@@ -155,13 +155,6 @@ public sealed class SocketNetworkEndpoint : INetworkEndpoint {
         } else if (chunk.Instruction == DISCONNECT_FLAG) StopSocketServices();
     }
     private async Task SendChunkInternal(NetworkChunk chunk, bool external = false) {
-        static async Task SendBuffer(Socket socket, ReadOnlyMemory<byte> buffer) {
-            int offset = 0;
-            int length = buffer.Length;
-            while (offset < length)
-                offset += await socket.SendAsync(buffer[offset..^0], SocketFlags.None).ConfigureAwait(false);
-        }
-
         int dataLength = chunk.Data.Length;
         bool shortData = dataLength <= SHORT_DATA_MAX_LENGTH;
 
@@ -174,30 +167,24 @@ public sealed class SocketNetworkEndpoint : INetworkEndpoint {
 
         try {
             await sendSemaphore.WaitAsync().ConfigureAwait(false);
-            await SendBuffer(connection, instructions).ConfigureAwait(false);
+            await connection.SendBuffer(instructions).ConfigureAwait(false);
 
             if (!shortData) {
                 byte[] lengthBuffer = new byte[sizeof(int)];
                 BinaryPrimitives.WriteInt32BigEndian(lengthBuffer, dataLength);
-                await SendBuffer(connection, lengthBuffer).ConfigureAwait(false);
+                await connection.SendBuffer(lengthBuffer).ConfigureAwait(false);
             }
 
             if (dataLength > 0)
-                await SendBuffer(connection, chunk.Data).ConfigureAwait(false);
+                await connection.SendBuffer(chunk.Data).ConfigureAwait(false);
         } finally {
             sendSemaphore.Release();
         }
     }
 
     private async Task<(NetworkChunk chunk, bool isExternal)> ReceiveChunk() {
-        static async Task ReceiveBuffer(Socket socket, Memory<byte> buffer, CancellationToken cancellationToken) {
-            int offset = 0;
-            while (offset <buffer.Length)
-                offset += await socket.ReceiveAsync(buffer[offset..^0], SocketFlags.None, cancellationToken).ConfigureAwait(false);
-        }
-
         byte[] instructionsBuffer = new byte[INSTRUCTION_BUFFER_LENGTH];
-        await ReceiveBuffer(connection, instructionsBuffer, cancellationTokenSource.Token).ConfigureAwait(false);
+        await connection.ReceiveBuffer(instructionsBuffer, cancellationTokenSource.Token).ConfigureAwait(false);
         
         byte lowLevelInstruction = instructionsBuffer[0];
         byte highLevelInstruction = instructionsBuffer[1];
@@ -209,12 +196,12 @@ public sealed class SocketNetworkEndpoint : INetworkEndpoint {
 
         if (isLongData) {
             byte[] lengthBuffer = new byte[sizeof(int)];
-            await ReceiveBuffer(connection, lengthBuffer, cancellationTokenSource.Token).ConfigureAwait(false);
+            await connection.ReceiveBuffer(lengthBuffer, cancellationTokenSource.Token).ConfigureAwait(false);
             dataLength = BinaryPrimitives.ReadInt32BigEndian(lengthBuffer);
         }
 
         byte[] data = new byte[dataLength];
-        await ReceiveBuffer(connection, data, cancellationTokenSource.Token).ConfigureAwait(false);
+        await connection.ReceiveBuffer(data, cancellationTokenSource.Token).ConfigureAwait(false);
         return (new(highLevelInstruction, data), isExternal);
     }
 

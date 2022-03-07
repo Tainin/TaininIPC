@@ -2,9 +2,9 @@
 using TaininIPC.Client.Interface;
 using TaininIPC.Utils;
 
-namespace TaininIPC.Client;
+namespace TaininIPC.Client.Abstract;
 
-public class NameMappedTable<TableType, TInput, TStored> where TableType : ITable<TInput, TStored>
+public abstract class AbstractNameMappedTable<TableType, TInput, TStored> where TableType : ITable<TInput, TStored>
     where TInput : notnull where TStored : notnull {
 
     private readonly CritBitTree<int> nameMap;
@@ -12,7 +12,7 @@ public class NameMappedTable<TableType, TInput, TStored> where TableType : ITabl
 
     protected readonly TableType internalTable;
 
-    public NameMappedTable(TableType table) {
+    public AbstractNameMappedTable(TableType table) {
         (nameMap, syncSemaphore) = (new(), new(1, 1));
         internalTable = table;
     }
@@ -51,7 +51,7 @@ public class NameMappedTable<TableType, TInput, TStored> where TableType : ITabl
             if (nameMap.TryAdd(nameKey, id)) return id;
 
             await internalTable.Remove(id).ConfigureAwait(false);
-            throw new ArgumentException($"The {nameof(NameMappedTable<TableType, TInput, TStored>)} " +
+            throw new ArgumentException($"The {nameof(AbstractNameMappedTable<TableType, TInput, TStored>)} " +
                 $"alreay contains an entry with the provided name.", nameof(name));
         } finally {
             syncSemaphore.Release();
@@ -90,7 +90,7 @@ public class NameMappedTable<TableType, TInput, TStored> where TableType : ITabl
     private int GetIdFromString(string name) {
         ReadOnlyMemory<byte> nameKey = Encoding.UTF8.GetBytes(name);
         if (!nameMap.TryGet(nameKey.Span, out int id))
-            throw new ArgumentException($"The {nameof(NameMappedTable<TableType, TInput, TStored>)} " +
+            throw new ArgumentException($"The {nameof(AbstractNameMappedTable<TableType, TInput, TStored>)} " +
                 $"does not contain an entry with the provided name.", nameof(name));
         return id;
     }

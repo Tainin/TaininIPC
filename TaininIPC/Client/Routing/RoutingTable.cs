@@ -5,7 +5,7 @@ using TaininIPC.Data.Serialized;
 
 namespace TaininIPC.Client.Routing;
 
-public sealed class RoutingTable : AbstractTable<IRouter, IRouter>,  IRouter {
+public sealed class RoutingTable : AbstractTable<IRouter, IRouter>, IRouter {
 
     public delegate ReadOnlyMemory<byte> KeyExtractor(MultiFrame frame);
 
@@ -17,10 +17,4 @@ public sealed class RoutingTable : AbstractTable<IRouter, IRouter>,  IRouter {
         (IRouter? router, bool got) = await GetInternal(keyExtractor(frame)).ConfigureAwait(false);
         if (got && router is not null) await router.RouteFrame(frame, origin).ConfigureAwait(false);
     }
-}
-
-public sealed class NameMappedRoutingTable : NameMappedTable<RoutingTable, IRouter, IRouter>, IRouter {
-    public NameMappedRoutingTable(int reservedCount, RoutingTable.KeyExtractor keyExtractor) : base(new(reservedCount, keyExtractor)) { }
-
-    public Task RouteFrame(MultiFrame frame, EndpointTableEntry origin) => internalTable.RouteFrame(frame, origin);
 }

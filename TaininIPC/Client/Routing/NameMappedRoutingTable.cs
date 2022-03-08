@@ -6,7 +6,7 @@ using TaininIPC.Data.Serialized;
 namespace TaininIPC.Client.Routing;
 
 public sealed class NameMappedRoutingTable : AbstractNameMappedTable<RoutingTable, IRouter, IRouter>, IRouter {
-    public NameMappedRoutingTable(int reservedCount, RoutingTable.KeyExtractor keyExtractor) : base(new(reservedCount, keyExtractor)) { }
+    public NameMappedRoutingTable(int reservedCount) : base(new(reservedCount)) { }
 
     public Task RouteFrame(MultiFrame frame, EndpointTableEntry origin) => internalTable.RouteFrame(frame, origin);
 }

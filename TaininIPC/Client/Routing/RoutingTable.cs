@@ -6,15 +6,11 @@ using TaininIPC.Data.Serialized;
 namespace TaininIPC.Client.Routing;
 
 public sealed class RoutingTable : AbstractTable<IRouter, IRouter>, IRouter {
-
-    public delegate ReadOnlyMemory<byte> KeyExtractor(MultiFrame frame);
-
-    private readonly KeyExtractor keyExtractor;
-
-    public RoutingTable(int reservedCount, KeyExtractor keyExtractor) : base(reservedCount) => this.keyExtractor = keyExtractor;
+    public RoutingTable(int reservedCount) : base(reservedCount) { }
     protected override Task<int> AddInternal(IRouter input, int id) => AddInternalBase(input, id);
     public async Task RouteFrame(MultiFrame frame, EndpointTableEntry origin) {
-        (IRouter? router, bool got) = await GetInternal(keyExtractor(frame)).ConfigureAwait(false);
+        ReadOnlyMemory<byte> routingKey = Protocol.ExtractRoutingKey(frame);
+        (IRouter? router, bool got) = await GetInternal(routingKey).ConfigureAwait(false);
         if (got && router is not null) await router.RouteFrame(frame, origin).ConfigureAwait(false);
     }
 }

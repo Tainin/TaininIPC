@@ -11,10 +11,13 @@ public sealed class Frame {
     private readonly Node preStart;
     private readonly Node postEnd;
 
+    public int Length { get; private set; }
+
     public Frame() {
         preStart = new(ReadOnlyMemory<byte>.Empty);
         postEnd = new(ReadOnlyMemory<byte>.Empty);
         (preStart.Next, postEnd.Previous) = (postEnd, preStart);
+        Length = 0;
     }
     public IEnumerable<ReadOnlyMemory<byte>> Serialized {
         get {
@@ -38,6 +41,7 @@ public sealed class Frame {
 
         Node next = prev.Next ?? throw new IndexOutOfRangeException();
 
+        Length++;
         (newNode.Next, newNode.Previous) = (next, prev);
         next.Previous = newNode;
         prev.Next = newNode;
@@ -57,7 +61,7 @@ public sealed class Frame {
         return data;
     }
     public void Remove(Index index) => Find(index, remove: true);
-    public void Clear() => (preStart.Next, postEnd.Previous) = (postEnd, preStart);
+    public void Clear() => (preStart.Next, postEnd.Previous, Length) = (postEnd, preStart, 0);
     public bool IsEmpty() => ReferenceEquals(preStart.Next, postEnd) || ReferenceEquals(postEnd.Previous, preStart);
 
     private Node Find(Index index, bool remove) {
@@ -73,6 +77,8 @@ public sealed class Frame {
             throw new IndexOutOfRangeException();
 
         if (!remove) return curr;
+
+        Length--;
 
         (curr.Next.Previous, curr.Previous.Next) = (curr.Previous, curr.Next);
         (curr.Next, curr.Previous) = (null, null);

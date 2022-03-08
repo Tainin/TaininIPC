@@ -51,7 +51,7 @@ public sealed class SocketNetworkEndpoint : INetworkEndpoint {
         UpdateStatus(EndpointStatus.Unstarted, Status);
     }
 
-    public async Task RunSocketServices() {
+    public async Task Run() {
         if (!UpdateStatus(EndpointStatus.Starting, EndpointStatus.Unstarted))
             throw new InvalidOperationException($"Cannot start a {nameof(SocketNetworkEndpoint)} which is already running.");
 
@@ -84,7 +84,7 @@ public sealed class SocketNetworkEndpoint : INetworkEndpoint {
 
         if (exception is not null) throw exception;
     }
-    public void StopSocketServices() {
+    public void Stop() {
         UpdateStatus(EndpointStatus.Stopped, EndpointStatus.Running);
         cancellationTokenSource.Cancel();
     }
@@ -152,7 +152,7 @@ public sealed class SocketNetworkEndpoint : INetworkEndpoint {
             Interlocked.Exchange(ref keepAliveExpiresAt, expiresAt);
 
             if ((chunk.Instruction & INITIAL_FLAG) != 0) keepAliveBeginSemaphore.Release();
-        } else if (chunk.Instruction == DISCONNECT_FLAG) StopSocketServices();
+        } else if (chunk.Instruction == DISCONNECT_FLAG) Stop();
     }
     private async Task SendChunkInternal(NetworkChunk chunk, bool external = false) {
         int dataLength = chunk.Data.Length;

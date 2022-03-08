@@ -55,7 +55,7 @@ public sealed class SocketNetworkEndpoint : INetworkEndpoint {
         if (!UpdateStatus(EndpointStatus.Starting, EndpointStatus.Unstarted))
             throw new InvalidOperationException($"Cannot start a {nameof(SocketNetworkEndpoint)} which is already running.");
 
-        await InitializeConncetion().ConfigureAwait(false);
+        await InitializeConnection().ConfigureAwait(false);
 
         Task[] lifetimeTasks = new Task[] { KeepAliveService(), ReceiveService(), TimeoutService(), DisconnectService() };
         Task firstToFinish = await Task.WhenAny(lifetimeTasks).ConfigureAwait(false);
@@ -93,7 +93,7 @@ public sealed class SocketNetworkEndpoint : INetworkEndpoint {
         await SendChunkInternal(chunk, external: true).ConfigureAwait(false);
     }
 
-    private async Task InitializeConncetion() {
+    private async Task InitializeConnection() {
         await SendChunkInternal(new(INITIAL_FLAG, ReadOnlyMemory<byte>.Empty)).ConfigureAwait(false);
         (NetworkChunk receivedInitialization, bool isExternal) = await ReceiveChunk().ConfigureAwait(false);
 

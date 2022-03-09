@@ -1,6 +1,6 @@
-﻿namespace TaininIPC.Network;
+﻿using TaininIPC.Network.Interface;
 
-using TaininIPC.Network.Interface;
+namespace TaininIPC.Network;
 
 /// <summary>
 /// Specifies the status of an <see cref="INetworkEndpoint"/>

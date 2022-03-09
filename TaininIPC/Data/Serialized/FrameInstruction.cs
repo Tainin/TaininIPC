@@ -1,6 +1,6 @@
-﻿namespace TaininIPC.Data.Serialized;
+﻿using TaininIPC.Data.Protocol;
 
-using Data.Protocol;
+namespace TaininIPC.Data.Serialized;
 
 /// <summary>
 /// Specifies the instruction of a <see cref="NetworkChunk"/> representing the structure of a <see cref="MultiFrame"/>

@@ -1,5 +1,4 @@
-﻿
-namespace TaininIPC.Client.Interface;
+﻿namespace TaininIPC.Client.Interface;
 
 public interface ITable<TInput, TStored>
     where TInput : notnull

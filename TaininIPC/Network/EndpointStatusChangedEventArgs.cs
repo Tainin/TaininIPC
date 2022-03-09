@@ -1,6 +1,6 @@
-﻿namespace TaininIPC.Network;
+﻿using TaininIPC.Network.Interface;
 
-using TaininIPC.Network.Interface;
+namespace TaininIPC.Network;
 
 /// <summary>
 /// Provides data for the <see cref="INetworkEndpoint.EndpointStatusChanged"/> event.

@@ -287,7 +287,8 @@ public sealed class SocketNetworkEndpoint : INetworkEndpoint {
     /// <summary>
     /// Helper method for receiving chunks from the remote
     /// </summary>
-    /// <returns>An asyncronous task representing the operation.</returns>
+    /// <returns>An asyncronous task that completes with the <see cref="NetworkChunk"/> received and a flag indicating whether the
+    /// the chunk is meant to be handled outside the <see cref="SocketNetworkEndpoint"/></returns>
     private async Task<(NetworkChunk chunk, bool isExternal)> ReceiveChunk() {
         // Receive instructions
         byte[] instructionsBuffer = new byte[INSTRUCTION_BUFFER_LENGTH];

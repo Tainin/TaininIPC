@@ -94,7 +94,7 @@ public class FrameEndpoint {
     /// <returns><see cref="IncomingFrameState.MultiFrame"/> or <see cref="IncomingFrameState.Error"/></returns>
     private IncomingFrameState ExpectStartMultiFrame(NetworkChunk chunk) {
         // Return Error state if the instruction was not the expected StartMultiFrame
-        if (chunk.Instruction != Instructions.StartMultiFrame)
+        if ((FrameInstruction)chunk.Instruction is not FrameInstruction.StartMultiFrame)
             return IncomingFrameState.Error;
 
         // Otherwise initialize new workingMultiFrame and return MultiFrame status
@@ -109,11 +109,11 @@ public class FrameEndpoint {
     /// or <see cref="IncomingFrameState.Error"/></returns>
     private IncomingFrameState InMultiFrameHandler(NetworkChunk chunk) {
         // If end of MultiFrame has been reached reutrn Complete status
-        if (chunk.Instruction == Instructions.EndMultiFrame)
+        if ((FrameInstruction)chunk.Instruction is FrameInstruction.EndMultiFrame)
             return IncomingFrameState.Complete;
 
         // If start of sub Frame has been reached initialize new workingFrame and reutrn Frame status
-        if (chunk.Instruction == Instructions.StartFrame) {
+        if ((FrameInstruction)chunk.Instruction is FrameInstruction.StartFrame) {
             workingFrame = workingMultiFrame.Create(chunk.Data);
             return IncomingFrameState.Frame;
         }
@@ -129,11 +129,11 @@ public class FrameEndpoint {
     /// or <see cref="IncomingFrameState.Error"/></returns>
     private IncomingFrameState InFrameHandler(NetworkChunk chunk) {
         // If end of Frame has been reached return back up to MultiFrame status
-        if (chunk.Instruction == Instructions.EndFrame)
+        if ((FrameInstruction)chunk.Instruction is FrameInstruction.EndFrame)
             return IncomingFrameState.MultiFrame;
 
         // If a buffer has been reached insert the chunks data into the workingFrame and stay in Frame state
-        if (chunk.Instruction == Instructions.AppendBuffer) {
+        if ((FrameInstruction)chunk.Instruction is FrameInstruction.AppendBuffer) {
             workingFrame.Insert(chunk.Data, ^1);
             return IncomingFrameState.Frame;
         }
@@ -149,13 +149,13 @@ public class FrameEndpoint {
     /// <returns>An <see cref="IEnumerable{T}"/> of <see cref="NetworkChunk"/> instances
     /// which can be used to rebuild the provided <see cref="MultiFrame"/></returns>
     private static IEnumerable<NetworkChunk> SerializeMultiFrame(MultiFrame multiFrame) {
-        yield return NetworkChunk.StartMultiFrame;
+        yield return FrameChunks.StartMultiFrame;
         foreach ((ReadOnlyMemory<byte> key, Frame frame) in multiFrame.Serialized) {
-            yield return NetworkChunk.StartFrame(key);
+            yield return FrameChunks.StartFrame(key);
             foreach (ReadOnlyMemory<byte> buffer in frame.Serialized)
-                yield return NetworkChunk.AppendBuffer(buffer);
-            yield return NetworkChunk.EndFrame;
+                yield return FrameChunks.AppendBuffer(buffer);
+            yield return FrameChunks.EndFrame;
         }
-        yield return NetworkChunk.EndMultiFrame;
+        yield return FrameChunks.EndMultiFrame;
     }
 }

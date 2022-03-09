@@ -86,7 +86,7 @@ public sealed class CritBitTree<T> {
     /// <param name="key">The key associated with the value to get.</param>
     /// <param name="value">If the <paramref name="key"/> was found, contains the associated value on return.
     /// Otherwise, the default value of the type of <paramref name="value"/> parameter.</param>
-    /// <returns><c>false</c> if <paramref name="key"/> was not found in the tree. <c>true</c> otherwise</returns>
+    /// <returns><see langword="false"/> if <paramref name="key"/> was not found in the tree. <see langword="true"/> otherwise</returns>
     public bool TryGet(ReadOnlySpan<byte> key, out T? value) {
         if (root is null) return UtilityFunctions.DefaultAndFalse(out value);
 
@@ -104,7 +104,7 @@ public sealed class CritBitTree<T> {
     /// Checks whether the specified <paramref name="key"/> is present in the tree.
     /// </summary>
     /// <param name="key"></param>
-    /// <returns><c>true</c> if <paramref name="key"/> is present in the tree. <c>false</c> otherwise.</returns>
+    /// <returns><see langword="true"/> if <paramref name="key"/> is present in the tree. <see langword="false"/> otherwise.</returns>
     public bool ContainsKey(ReadOnlySpan<byte> key) {
         if (root == null) return false;
         //get the closest match for the given key
@@ -118,7 +118,7 @@ public sealed class CritBitTree<T> {
     /// </summary>
     /// <param name="key">The key of the element to add.</param>
     /// <param name="value">The value of the element to add.</param>
-    /// <returns><c>false</c> if <paramref name="key"/> was already present in the tree. <c>true</c> otherwise.</returns>
+    /// <returns><see langword="false"/> if <paramref name="key"/> was already present in the tree. <see langword="true"/> otherwise.</returns>
     public bool TryAdd(ReadOnlyMemory<byte> key, T value) {
         //if root is null insert the new key and value as root
         if (root is null) {
@@ -223,7 +223,7 @@ public sealed class CritBitTree<T> {
     /// </summary>
     /// <param name="key">The key which should have it's value updated.</param>
     /// <param name="newValue">The new value.</param>
-    /// <returns><c>false</c> if <paramref name="key"/> was not found in the tree. <c>true</c> otherwise.</returns>
+    /// <returns><see langword="false"/> if <paramref name="key"/> was not found in the tree. <see langword="true"/> otherwise.</returns>
     public bool TryUpdate(ReadOnlySpan<byte> key, T newValue) {
         if (root is null) return false;
 
@@ -242,7 +242,7 @@ public sealed class CritBitTree<T> {
     /// <param name="key">The key of the element to remove.</param>
     /// <param name="value">If present, the <c>Value</c> associated with the given <paramref name="key"/>.
     /// Otherwise the default value of <c>T</c>.</param>
-    /// <returns><c>false</c> if <paramref name="key"/> was not found in the tree. <c>true</c> otherwise.</returns>
+    /// <returns><see langword="false"/> if <paramref name="key"/> was not found in the tree. <see langword="true"/> otherwise.</returns>
     public bool TryPop(ReadOnlySpan<byte> key, out T? value) {
         //if root is null the given key does not exist in the tree
         if (root is null) return UtilityFunctions.DefaultAndFalse(out value);
@@ -301,7 +301,7 @@ public sealed class CritBitTree<T> {
     /// Attempts to remove an element from the tree.
     /// </summary>
     /// <param name="key">The key of the element to remove.</param>
-    /// <returns><c>false</c> if <paramref name="key"/> was not found in the tree. <c>true</c> otherwise.</returns>
+    /// <returns><see langword="false"/> if <paramref name="key"/> was not found in the tree. <see langword="true"/> otherwise.</returns>
     public bool TryRemove(ReadOnlySpan<byte> key) => TryPop(key, out _);
 
     /// <summary>

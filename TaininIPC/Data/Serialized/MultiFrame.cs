@@ -46,7 +46,7 @@ public sealed class MultiFrame {
     /// <returns>The <see cref="Frame"/> associated with the specified <paramref name="key"/>.</returns>
     /// <exception cref="InvalidOperationException">If the specified <paramref name="key"/> does not exist.</exception>
     private Frame Get(ReadOnlyMemory<byte> key) => subFrames.TryGet(key.Span, out Frame? frame) ? frame! :
-        throw new InvalidOperationException();
+        throw new InvalidOperationException($"The specified key does not exist in the {nameof(MultiFrame)}");
     /// <summary>
     /// Checks if the specified <paramref name="id"/> is present in the <see cref="MultiFrame"/>.
     /// </summary>
@@ -73,7 +73,7 @@ public sealed class MultiFrame {
     /// <exception cref="InvalidOperationException">If the specified <paramref name="key"/> does not exist.</exception>
     public void Remove(ReadOnlyMemory<byte> key) {
         if (subFrames.TryRemove(key.Span)) return;
-        else throw new InvalidOperationException();
+        else throw new InvalidOperationException($"The specified key does not exist in the {nameof(MultiFrame)}");
     }
     /// <summary>
     /// Removes all <see cref="Frame"/> instances from the <see cref="MultiFrame"/>.
@@ -89,7 +89,7 @@ public sealed class MultiFrame {
     private Frame CreateInternal(ReadOnlyMemory<byte> key) {
         Frame frame = new();
         if (subFrames.TryAdd(key[..sizeof(short)], frame)) return frame;
-        else throw new InvalidOperationException();
+        else throw new InvalidOperationException($"The specified key already exists in the {nameof(MultiFrame)}");
     }
 
     /// <summary>

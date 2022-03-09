@@ -74,10 +74,12 @@ public sealed class Frame {
         // Traverse the prev node to the position before the insert location
         int limit = index.Value;
         for (int i = 0; i < limit; i++)
-            prev = traverse(prev) ?? throw new IndexOutOfRangeException();
+            prev = traverse(prev) ?? 
+                throw new IndexOutOfRangeException($"Attempted to insert outside the range of the {nameof(Frame)}");
 
         // Get the node after the insert location
-        Node next = prev.Next ?? throw new IndexOutOfRangeException();
+        Node next = prev.Next ??
+            throw new IndexOutOfRangeException($"Attempted to insert outside the range of the {nameof(Frame)}");
 
         // Update the length
         Length++;
@@ -153,11 +155,12 @@ public sealed class Frame {
         // Traverse to the node specified by the index
         int limit = index.Value;
         for (int i = 0; i < limit; i++)
-            curr = traverse(curr) ?? throw new IndexOutOfRangeException();
+            curr = traverse(curr) ??
+                throw new IndexOutOfRangeException($"Attempted to find a node outside the range of the {nameof(Frame)}");
 
         // If the Next or Previous node is null then curr is preStart or postEnd which cannot be removed
         if (curr.Next is null || curr.Previous is null)
-            throw new IndexOutOfRangeException();
+            throw new IndexOutOfRangeException($"Attempted to find a node outside the range of the {nameof(Frame)}");
 
         // If the remove flag is not set return early
         if (!remove) return curr;

@@ -19,6 +19,9 @@ public sealed class Frame {
         (preStart.Next, postEnd.Previous) = (postEnd, preStart);
         Length = 0;
     }
+    public Frame(IEnumerable<ReadOnlyMemory<byte>> data) : this() {
+        foreach (ReadOnlyMemory<byte> buffer in data) Insert(buffer, ^1);
+    }
     public IEnumerable<ReadOnlyMemory<byte>> AllBuffers {
         get {
             Node curr = preStart.Next!;

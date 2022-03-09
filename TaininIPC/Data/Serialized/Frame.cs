@@ -19,7 +19,7 @@ public sealed class Frame {
         (preStart.Next, postEnd.Previous) = (postEnd, preStart);
         Length = 0;
     }
-    public IEnumerable<ReadOnlyMemory<byte>> Serialized {
+    public IEnumerable<ReadOnlyMemory<byte>> AllBuffers {
         get {
             Node curr = preStart.Next!;
             while (!ReferenceEquals(curr, postEnd)) {

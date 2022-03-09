@@ -150,9 +150,9 @@ public class FrameEndpoint {
     /// which can be used to rebuild the provided <see cref="MultiFrame"/></returns>
     private static IEnumerable<NetworkChunk> SerializeMultiFrame(MultiFrame multiFrame) {
         yield return FrameChunks.StartMultiFrame;
-        foreach ((ReadOnlyMemory<byte> key, Frame frame) in multiFrame.Serialized) {
+        foreach ((ReadOnlyMemory<byte> key, Frame frame) in multiFrame.AllFrames) {
             yield return FrameChunks.StartFrame(key);
-            foreach (ReadOnlyMemory<byte> buffer in frame.Serialized)
+            foreach (ReadOnlyMemory<byte> buffer in frame.AllBuffers)
                 yield return FrameChunks.AppendBuffer(buffer);
             yield return FrameChunks.EndFrame;
         }

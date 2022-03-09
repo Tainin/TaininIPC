@@ -9,7 +9,7 @@ public sealed class MultiFrame {
 
     public MultiFrame() => subFrames = new();
 
-    public IEnumerable<(ReadOnlyMemory<byte> Key, Frame Frame)> Serialized => subFrames.Pairs;
+    public IEnumerable<(ReadOnlyMemory<byte> Key, Frame Frame)> AllFrames => subFrames.Pairs;
 
     public Frame Create(short id) {
         Frame frame = new();

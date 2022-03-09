@@ -11,24 +11,24 @@ public sealed class MultiFrame {
 
     public IEnumerable<(ReadOnlyMemory<byte> Key, Frame Frame)> AllFrames => subFrames.Pairs;
 
-    public Frame Create(short id) {
-        Frame frame = new();
-        if (subFrames.TryAdd(GetKey(id), frame)) return frame;
+    public Frame Create(short id) => CreateInternal(GetKey(id));
+    public Frame Create(ReadOnlyMemory<byte> key) => CreateInternal(key);
+    public Frame Get(short id) => Get(GetKey(id));
+    private Frame Get(ReadOnlyMemory<byte> key) => subFrames.TryGet(key.Span, out Frame? frame) ? frame! :
+        throw new InvalidOperationException();
+    public bool ContainsId(short id) => ContainsKey(GetKey(id));
+    public bool ContainsKey(ReadOnlyMemory<byte> key) => subFrames.ContainsKey(key.Span);
+    public void Remove(short id) => Remove(GetKey(id));
+    public void Remove(ReadOnlyMemory<byte> key) {
+        if (subFrames.TryRemove(key.Span)) return;
         else throw new InvalidOperationException();
     }
-    public Frame Create(ReadOnlyMemory<byte> key) {
+    public void Clear() => subFrames.Clear();
+    private Frame CreateInternal(ReadOnlyMemory<byte> key) {
         Frame frame = new();
         if (subFrames.TryAdd(key[..sizeof(short)], frame)) return frame;
         else throw new InvalidOperationException();
     }
-    public Frame Get(short id) => subFrames.TryGet(GetKey(id).Span, out Frame? frame) ? frame! : 
-        throw new InvalidOperationException();
-    public bool ContainsKey(short id) => subFrames.ContainsKey(GetKey(id).Span);
-    public void Remove(short id) {
-        if (subFrames.TryRemove(GetKey(id).Span)) return;
-        else throw new InvalidOperationException();
-    }
-    public void Clear() => subFrames.Clear();
 
     private static ReadOnlyMemory<byte> GetKey(short id) {
         byte[] key = new byte[sizeof(short)];

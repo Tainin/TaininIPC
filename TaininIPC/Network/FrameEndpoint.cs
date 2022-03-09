@@ -83,8 +83,11 @@ public class FrameEndpoint {
             incomingFrameState = IncomingFrameState.None;
         }
 
+        // If there was an error attempt to start a new MultiFrame
+        // Any following chunks that do not start another MultiFrame will continue the Error -> Restart cycle
+        // until the start of a new MultiFrame is reached
         if (incomingFrameState == IncomingFrameState.Error)
-            throw new InvalidOperationException();
+            incomingFrameState = IncomingFrameState.None;
     }
 
     /// <summary>

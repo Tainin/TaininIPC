@@ -2,6 +2,10 @@
 
 namespace TaininIPC.Utils;
 
+/// <summary>
+/// Represents an associative array backed internally by a critical bit binary tree.
+/// </summary>
+/// <typeparam name="T">The type of data to be stored in the tree.</typeparam>
 public sealed class CritBitTree<T> {
     /// <summary>
     /// Marker interface to give node types a common parent type.

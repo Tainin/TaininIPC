@@ -37,8 +37,8 @@ public abstract class AbstractNameMappedTable<TableType, TInput, TStored> where 
     public Task Remove(string name) => RemoveInternal(name, 0, ReadOnlyMemory<byte>.Empty);
 
     private async Task<int> AddInternal(string name, int id, TInput input, bool reserved, bool named) {
-        if (string.IsNullOrEmpty(name)) 
-            throw new ArgumentException("Name must not be null or empty", nameof(name));
+        if (named && string.IsNullOrEmpty(name)) 
+            throw new ArgumentException("Name must not be null or empty for named entries.", nameof(name));
         ReadOnlyMemory<byte> nameKey = Encoding.UTF8.GetBytes(name);
         await syncSemaphore.WaitAsync().ConfigureAwait(false);
         try {

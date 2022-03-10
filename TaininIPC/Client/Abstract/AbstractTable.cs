@@ -1,5 +1,4 @@
-﻿using System.Buffers.Binary;
-using TaininIPC.Client.Interface;
+﻿using TaininIPC.Client.Interface;
 using TaininIPC.Utils;
 
 namespace TaininIPC.Client.Abstract;
@@ -31,13 +30,13 @@ public abstract class AbstractTable<TInput, TStored> : ITable<TInput, TStored> w
         table.Clear();
         syncSemaphore.Release();
     }
-    public Task<TStored> Get(int id) => Get(GetKey(id));
+    public Task<TStored> Get(int id) => Get(KeyUtils.GetKey(id));
     public async Task<TStored> Get(ReadOnlyMemory<byte> key) {
         (TStored? stored, bool got) = await GetInternal(key).ConfigureAwait(false);
         if (got && stored is not null) return stored;
         throw new ArgumentException("The provided key was not found in the table.");
     }
-    public Task Remove(int id) => Remove(GetKey(id));
+    public Task Remove(int id) => Remove(KeyUtils.GetKey(id));
     public async Task Remove(ReadOnlyMemory<byte> key) {
         await syncSemaphore.WaitAsync().ConfigureAwait(false);
         bool removed = table.TryRemove(key.Span);
@@ -51,7 +50,7 @@ public abstract class AbstractTable<TInput, TStored> : ITable<TInput, TStored> w
     protected abstract Task<int> AddInternal(TInput input, int id);
     protected async Task<int> AddInternalBase(TStored stored, int id) {
         await syncSemaphore.WaitAsync().ConfigureAwait(false);
-        bool added = table.TryAdd(GetKey(id), stored);
+        bool added = table.TryAdd(KeyUtils.GetKey(id), stored);
         syncSemaphore.Release();
 
         if (added && stored is not null) return id;
@@ -63,11 +62,5 @@ public abstract class AbstractTable<TInput, TStored> : ITable<TInput, TStored> w
         bool got = table.TryGet(key.Span, out TStored? stored);
         syncSemaphore.Release();
         return (got ? stored : default, got);
-    }
-
-    private static ReadOnlyMemory<byte> GetKey(int id) {
-        byte[] key = new byte[sizeof(int)];
-        BinaryPrimitives.WriteInt32BigEndian(key, id);
-        return key;
     }
 }

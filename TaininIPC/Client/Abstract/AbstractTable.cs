@@ -3,7 +3,7 @@ using TaininIPC.Utils;
 
 namespace TaininIPC.Client.Abstract;
 
-public abstract class AbstractTable<TInput, TStored> : ITable<TInput, TStored> where TInput : notnull where TStored : notnull {
+public abstract class AbstractTable<TInput, TStored> where TInput : notnull where TStored : notnull {
 
     private readonly CritBitTree<TStored> table;
     private readonly SemaphoreSlim syncSemaphore;

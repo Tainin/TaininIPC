@@ -1,10 +1,9 @@
 ﻿using System.Text;
-using TaininIPC.Client.Interface;
 using TaininIPC.Utils;
 
 namespace TaininIPC.Client.Abstract;
 
-public abstract class AbstractNameMappedTable<TableType, TInput, TStored> where TableType : ITable<TInput, TStored>
+public abstract class AbstractNameMappedTable<TableType, TInput, TStored> where TableType : AbstractTable<TInput, TStored>
     where TInput : notnull where TStored : notnull {
 
     private readonly CritBitTree<int> nameMap;

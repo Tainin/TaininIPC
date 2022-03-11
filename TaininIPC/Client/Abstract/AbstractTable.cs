@@ -10,7 +10,7 @@ namespace TaininIPC.Client.Abstract;
 /// provide a transformation from <typeparamref name="TInput"/> to 
 /// <typeparamref name="TStored"/> in <see cref="AddInternal(TInput, int)"/></typeparam>
 /// <typeparam name="TStored">The type of the objects stored in the table.</typeparam>
-public abstract class AbstractTable<TInput, TStored> where TInput : notnull where TStored : notnull {
+public abstract class AbstractTable<TInput, TStored> : ITable<TInput, TStored> where TInput : notnull where TStored : notnull {
 
     // Internal mapping
     private readonly CritBitTree<TStored> table;
@@ -94,6 +94,26 @@ public abstract class AbstractTable<TInput, TStored> where TInput : notnull wher
         if (got && stored is not null) return stored;
         // Otherwise throw exception
         throw new ArgumentException("The provided key was not found in the table.");
+    }
+    /// <summary>
+    /// Checks if the provided <paramref name="id"/> exists in the <see cref="AbstractTable{TInput, TStored}"/>.
+    /// </summary>
+    /// <param name="id">The id to check for.</param>
+    /// <returns><see langword="true"/> if the provided <paramref name="id"/> exists, <see langword="false"/> otherwise.</returns>
+    public Task<bool> Contains(int id) => Contains(KeyUtils.GetKey(id));
+    /// <summary>
+    /// Checks if the provided <paramref name="key"/> exists in the <see cref="AbstractTable{TInput, TStored}"/>.
+    /// </summary>
+    /// <param name="key">The key to check for.</param>
+    /// <returns><see langword="true"/> if the provided <paramref name="key"/> exists, <see langword="false"/> otherwise.</returns>
+    public async Task<bool> Contains(ReadOnlyMemory<byte> key) {
+        // Aquire semaphore to guarantee exclusive access to the table.
+        await syncSemaphore.WaitAsync().ConfigureAwait(false);
+        try {
+            return table.ContainsKey(key.Span);
+        } finally {
+            syncSemaphore.Release();
+        }
     }
     /// <summary>
     /// Removes the <typeparamref name="TStored"/> mapped to the provided <paramref name="id"/>

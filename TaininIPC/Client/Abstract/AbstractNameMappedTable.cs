@@ -197,6 +197,52 @@ public abstract class AbstractNameMappedTable<TableType, TInput, TStored> : ITab
     public Task Remove(ReadOnlyMemory<byte> key) => RemoveInternal(string.Empty, 0, key);
 
     /// <summary>
+    /// Gets the name which maps to the given <paramref name="id"/>.
+    /// </summary>
+    /// <param name="id">The id to get the name which maps to.</param>
+    /// <returns>An asyncronous task which completes with the name which maps to the given <paramref name="id"/>.</returns>
+    public Task<string> GetName(int id) => GetName(KeyUtils.GetKey(id));
+    /// <summary>
+    /// Gets the name which maps to the given <paramref name="key"/>.
+    /// </summary>
+    /// <param name="key">The key to get the name which maps to.</param>
+    /// <returns>An asyncronous task which completes with the name which maps to the given <paramref name="key"/>.</returns>
+    /// <exception cref="InvalidOperationException">If the given <paramref name="key"/> does not have a name which
+    /// maps to it.</exception>
+    public async Task<string> GetName(ReadOnlyMemory<byte> key) {
+        await syncSemaphore.WaitAsync().ConfigureAwait(false);
+        try {
+            if (reverse.TryGet(key.Span, out string? name) && name is not null) return name;
+            throw new InvalidOperationException("The given key does not have a name mapped to it.");
+        } finally {
+            syncSemaphore.Release();
+        }
+    }
+
+    /// <summary>
+    /// Gets the key which is mapped to by the given <paramref name="name"/>.
+    /// </summary>
+    /// <param name="name">The name to get the key which it maps to.</param>
+    /// <returns>An asyncronous task which completes with the key which is mapped to by the given <paramref name="name"/>.</returns>
+    public async Task<ReadOnlyMemory<byte>> GetKey(string name) => KeyUtils.GetKey(await GetId(name).ConfigureAwait(false));
+    /// <summary>
+    /// Gets the id which is mapped to by the given <paramref name="name"/>.
+    /// </summary>
+    /// <param name="name">The name to get the id which it maps to.</param>
+    /// <returns>An asyncronous task which completes with the id which is mapped to by the given <paramref name="name"/>.</returns>
+    /// <exception cref="InvalidOperationException">If the given <paramref name="name"/> does not map to an id.</exception>
+    public async Task<int> GetId(string name) {
+        await syncSemaphore.WaitAsync().ConfigureAwait(false);
+        try {
+            ReadOnlyMemory<byte> nameKey = Encoding.UTF8.GetBytes(name);
+            if (forward.TryGet(nameKey.Span, out int id)) return id;
+            throw new InvalidOperationException("The given name does not map to an id.");
+        } finally {
+            syncSemaphore.Release();
+        }
+    }
+
+    /// <summary>
     /// Helper method which sets the name mapping of an entry with the given <paramref name="id"/> or <paramref name="key"/>.
     /// </summary>
     /// <param name="name">The name to set to the entry.</param>

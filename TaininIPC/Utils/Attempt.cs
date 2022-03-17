@@ -5,7 +5,7 @@
 /// parameters are not permitted.
 /// </summary>
 /// <typeparam name="T">The type of the result.</typeparam>
-public sealed class Attempt<T> {
+public sealed class Attempt<T> where T : notnull {
 
     /// <summary>
     /// Represents a failed <see cref="Attempt{T}"/>
@@ -22,14 +22,14 @@ public sealed class Attempt<T> {
     public bool HasResult { get; } = false;
 
     /// <summary>
-    /// Initializes a new <see cref="Attempt{T}"/> given the <paramref name="result"/> of the attempt.
-    /// </summary>
-    /// <param name="result">The result of the attempt.</param>
-    public Attempt(T result) => (Result, HasResult) = (result, true);
-    /// <summary>
     /// Initializes a new <see cref="Attempt{T}"/> without a result.
     /// </summary>
     public Attempt() { }
+    /// <summary>
+    /// Initializes a new <see cref="Attempt{T}"/> given the <paramref name="result"/> of the attempt.
+    /// </summary>
+    /// <param name="result">The result of the attempt.</param>
+    public Attempt(T? result) => (Result, HasResult) = (result, true);
 
     /// <summary>
     /// Attempts to get the result of the <see cref="Attempt{T}"/>.
@@ -49,5 +49,19 @@ public sealed class Attempt<T> {
     /// where <see cref="T"/> is <typeparamref name="T"/>
     /// </summary>
     /// <param name="result"></param>
-    public static implicit operator Attempt<T>(T result) => new(result);
+    public static implicit operator Attempt<T>(T? result) => new(result);
+}
+
+public static class AttemptExtensions {
+    /// <summary>
+    /// Converts a <see langword="bool"/> and a <typeparamref name="T"/> to an <see cref="Attempt{T}"/>.
+    /// </summary>
+    /// <typeparam name="T">The type of the result.</typeparam>
+    /// <param name="hasResult">A flag indicating whether or not there is a result.</param>
+    /// <param name="result">The result.</param>
+    /// <returns>The <see cref="Attempt{T}"/> of <paramref name="hasResult"/> and <paramref name="result"/>.</returns>
+    public static Attempt<T> ToAttempt<T>(this bool hasResult, T? result) where T : notnull {
+        if (hasResult) return result;
+        return Attempt<T>.Failed;
+    }
 }

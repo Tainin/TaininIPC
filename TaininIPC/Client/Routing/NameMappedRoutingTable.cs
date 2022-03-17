@@ -1,4 +1,5 @@
-﻿using TaininIPC.Client.Abstract;
+﻿#if false
+using TaininIPC.Client.Abstract;
 using TaininIPC.Client.Endpoints;
 using TaininIPC.Client.Interface;
 using TaininIPC.Data.Serialized;
@@ -10,3 +11,4 @@ public sealed class NameMappedRoutingTable : AbstractNameMappedTable<RoutingTabl
 
     public Task RouteFrame(MultiFrame frame, EndpointTableEntry origin) => internalTable.RouteFrame(frame, origin);
 }
+#endif

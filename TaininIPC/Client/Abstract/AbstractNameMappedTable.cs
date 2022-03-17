@@ -1,9 +1,12 @@
-﻿using System.Buffers.Binary;
+﻿#if false
+using System.Buffers.Binary;
 using System.Text;
 using TaininIPC.Client.Interface;
 using TaininIPC.Utils;
 
 namespace TaininIPC.Client.Abstract;
+
+//TODO: Update AbstractNameMappedTable to Try(Something) pattern!
 
 /// <summary>
 /// Wraps a subtype of <see cref="AbstractTable{TInput, TStored}"/> and adds an additional level of mapping from <see langword="string"/> 
@@ -345,3 +348,4 @@ public abstract class AbstractNameMappedTable<TableType, TInput, TStored> : ITab
         return false;
     }
 }
+#endif

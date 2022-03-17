@@ -42,20 +42,19 @@ public abstract class AbstractTable<TInput, TStored> : ITable<TInput, TStored> w
     }
 
     /// <summary>
-    /// Adds the specified <typeparamref name="TInput"/> to the <see cref="AbstractTable{TInput, TStored}"/> with an automatically assigned id.
+    /// Adds <paramref name="input"/> to the table with an automatically assigned id.
     /// </summary>
-    /// <param name="input">The <typeparamref name="TInput"/> to add to the <see cref="AbstractTable{TInput, TStored}"/>.</param>
-    /// <returns>An asyncronous task which completes with the id assigned to the added <typeparamref name="TInput"/>.</returns>
+    /// <param name="input">The entry to add to the table.</param>
+    /// <returns>An asyncronous task which completes with the id assigned to <paramref name="input"/>.</returns>
     public Task<int> Add(TInput input) => AddInternal(input, Interlocked.Increment(ref nextAvailableId));
     /// <summary>
-    /// Adds the specified <typeparamref name="TInput"/> to the <see cref="AbstractTable{TInput, TStored}"/> 
-    /// with the specified id. The id must be within the reserved range.
+    /// Adds <paramref name="input"/> to the table with the specified <paramref name="id"/>.
     /// </summary>
-    /// <param name="input">The <typeparamref name="TInput"/> to add to the <see cref="AbstractTable{TInput, TStored}"/>.</param>
-    /// <param name="id">The id to map to the added <typeparamref name="TInput"/></param>
+    /// <param name="input">The entry to add to the table.</param>
+    /// <param name="id">The id to map to <paramref name="input"/>.</param>
     /// <returns>An asyncronous task representing the opperation.</returns>
-    /// <exception cref="ArgumentOutOfRangeException">If the specified <paramref name="id"/> is less than 0 or
-    /// greater than or equal to <see cref="ReservedCount"/></exception>
+    /// <exception cref="ArgumentOutOfRangeException">If <paramref name="id"/> is less than <c>0</c> or greater 
+    /// or equal to <see cref="ReservedCount"/></exception>
     public Task AddReserved(TInput input, int id) {
         // Ensure that the specified id falls within the reserved range.
         if (id < 0) throw new ArgumentOutOfRangeException(nameof(id), "Ids must not be less than 0.");
@@ -64,8 +63,9 @@ public abstract class AbstractTable<TInput, TStored> : ITable<TInput, TStored> w
         // Add the item to the table
         return AddInternal(input, id);
     }
+
     /// <summary>
-    /// Removes all <typeparamref name="TStored"/> in the <see cref="AbstractTable{TInput, TStored}"/>.
+    /// Removes all entries from the table.
     /// </summary>
     /// <returns>An asyncronous task representing the opperation.</returns>
     public async Task Clear() {
@@ -74,40 +74,43 @@ public abstract class AbstractTable<TInput, TStored> : ITable<TInput, TStored> w
         table.Clear();
         syncSemaphore.Release();
     }
+
     /// <summary>
-    /// Gets the <typeparamref name="TStored"/> mapped to the provided <paramref name="id"/>.
+    /// Attempts to get the entry mapped to by the given <paramref name="id"/>.
     /// </summary>
-    /// <param name="id">The id of the <typeparamref name="TStored"/> to get.</param>
-    /// <returns>An asyncronous task which completes with the 
-    /// <typeparamref name="TStored"/> mapped to the provided <paramref name="id"/></returns>
-    public Task<TStored> Get(int id) => Get(KeyUtils.GetKey(id));
+    /// <param name="id">The id of the entry to get.</param>
+    /// <returns>An asyncronous task which completes with an <see cref="Attempt{T}"/> which represents the entry mapped to by the given
+    /// <paramref name="id"/> given that it exists.</returns>
+    public Task<Attempt<TStored>> TryGet(int id) => TryGet(KeyUtils.GetKey(id));
     /// <summary>
-    /// Gets the <typeparamref name="TStored"/> mapped to the provided <paramref name="key"/>.
+    /// Attempts to get the entry mapped to by the given <paramref name="key"/>.
     /// </summary>
-    /// <param name="key">The key of the <typeparamref name="TStored"/> to get.</param>
-    /// <returns>An asyncronous task which completes with the 
-    /// <typeparamref name="TStored"/> mapped to the provided <paramref name="key"/></returns>
-    public async Task<TStored> Get(ReadOnlyMemory<byte> key) {
-        // Call the helper method to get the item
-        (TStored? stored, bool got) = await GetInternal(key).ConfigureAwait(false);
-        // If the item was gotten return it.
-        if (got && stored is not null) return stored;
-        // Otherwise throw exception
-        throw new ArgumentException("The provided key was not found in the table.");
+    /// <param name="key">The key of the entry to get.</param>
+    /// <returns>An asyncronous task which completes with an <see cref="Attempt{T}"/> which represents the entry mapped to by the given
+    /// <paramref name="key"/> given that it exists.</returns>
+    public async Task<Attempt<TStored>> TryGet(ReadOnlyMemory<byte> key) {
+        await syncSemaphore.WaitAsync().ConfigureAwait(false);
+        try {
+            return table.TryGet(key.Span, out TStored? stored).ToAttempt(stored);
+        } finally {
+            syncSemaphore.Release();
+        }
     }
+
     /// <summary>
-    /// Checks if the provided <paramref name="id"/> exists in the <see cref="AbstractTable{TInput, TStored}"/>.
+    /// Determines if the given <paramref name="id"/> is in the table.
     /// </summary>
     /// <param name="id">The id to check for.</param>
-    /// <returns><see langword="true"/> if the provided <paramref name="id"/> exists, <see langword="false"/> otherwise.</returns>
+    /// <returns>An asyncronous task which completes with <see langword="true"/> if the <paramref name="id"/> is in the table,
+    /// <see langword="false"/> otherwise.</returns>
     public Task<bool> Contains(int id) => Contains(KeyUtils.GetKey(id));
     /// <summary>
-    /// Checks if the provided <paramref name="key"/> exists in the <see cref="AbstractTable{TInput, TStored}"/>.
+    /// Determines if the given <paramref name="key"/> is in the table.
     /// </summary>
     /// <param name="key">The key to check for.</param>
-    /// <returns><see langword="true"/> if the provided <paramref name="key"/> exists, <see langword="false"/> otherwise.</returns>
+    /// <returns>An asyncronous task which completes with <see langword="true"/> if the <paramref name="key"/> is in the table,
+    /// <see langword="false"/> otherwise.</returns>
     public async Task<bool> Contains(ReadOnlyMemory<byte> key) {
-        // Aquire semaphore to guarantee exclusive access to the table.
         await syncSemaphore.WaitAsync().ConfigureAwait(false);
         try {
             return table.ContainsKey(key.Span);
@@ -115,26 +118,27 @@ public abstract class AbstractTable<TInput, TStored> : ITable<TInput, TStored> w
             syncSemaphore.Release();
         }
     }
+
     /// <summary>
-    /// Removes the <typeparamref name="TStored"/> mapped to the provided <paramref name="id"/>
+    /// Attempts to remove the entry mapped to by the given <paramref name="id"/>.
     /// </summary>
-    /// <param name="id">The id of the <typeparamref name="TStored"/> to get.</param>
-    /// <returns>An asyncronous task representing the opperation.</returns>
-    public Task Remove(int id) => Remove(KeyUtils.GetKey(id));
+    /// <param name="id">The id of the entry to remove.</param>
+    /// <returns>An asyncronous task which completes with <see langword="true"/> if the <paramref name="id"/> is in the table,
+    /// <see langword="false"/> otherwise.</returns>
+    public Task<bool> TryRemove(int id) => TryRemove(KeyUtils.GetKey(id));
     /// <summary>
-    /// Removes the <typeparamref name="TStored"/> mapped to the provided <paramref name="key"/>
+    /// Attempts to remove the entry mapped to by the given <paramref name="key"/>.
     /// </summary>
-    /// <param name="key">The key of the <typeparamref name="TStored"/> to get.</param>
-    /// <returns>An asyncronous task representing the opperation.</returns>
-    public async Task Remove(ReadOnlyMemory<byte> key) {
-        // Aquire semaphore to guarantee exclusive access to the table.
+    /// <param name="key">The key of the entry to remove.</param>
+    /// <returns>An asyncronous task which completes with <see langword="true"/> if the <paramref name="key"/> is in the table,
+    /// <see langword="false"/> otherwise.</returns>
+    public async Task<bool> TryRemove(ReadOnlyMemory<byte> key) {
         await syncSemaphore.WaitAsync().ConfigureAwait(false);
-        bool removed = table.TryRemove(key.Span);
-        syncSemaphore.Release();
-
-        if (removed) return;
-
-        throw new ArgumentException("The provided key was not found in the table.");
+        try {
+            return table.TryRemove(key.Span);
+        } finally {
+            syncSemaphore.Release();
+        }
     }
 
     /// <summary>
@@ -142,42 +146,25 @@ public abstract class AbstractTable<TInput, TStored> : ITable<TInput, TStored> w
     /// <typeparamref name="TInput"/> and <typeparamref name="TStored"/> 
     /// and then call <see cref="AddInternalBase(TStored, int)"/> with the result of the transformation.
     /// </summary>
-    /// <param name="input">The <typeparamref name="TInput"/> to add to the <see cref="AbstractTable{TInput, TStored}"/>.</param>
-    /// <param name="id">The id to map to the added <typeparamref name="TInput"/></param>
-    /// <returns>An asyncronous task which completes with the id assigned to the added <typeparamref name="TInput"/>.</returns>
+    /// <param name="input">The entry to add to the table.</param>
+    /// <param name="id">The id to map to <paramref name="stored"/>.</param>
+    /// <returns>An asyncronous task which completes with the id assigned to <paramref name="input"/>.</returns>
     protected abstract Task<int> AddInternal(TInput input, int id);
     /// <summary>
-    /// A helper method which adds the specified <typeparamref name="TStored"/> to the <see cref="AbstractTable{TInput, TStored}"/>
-    /// with the specified id.
+    /// A helper method which adds <paramref name="stored"/> to the table with the specified <paramref name="id"/>.
     /// </summary>
-    /// <param name="stored">The <typeparamref name="TStored"/> to add to the <see cref="AbstractTable{TInput, TStored}"/>.</param>
-    /// <param name="id">The id to map the added <typeparamref name="TStored"/> to.</param>
-    /// <returns>An asyncronous task which completes with the id assigned to the added <typeparamref name="TInput"/>.</returns>
-    /// <exception cref="ArgumentException"></exception>
+    /// <param name="stored">The entry to add to the table.</param>
+    /// <param name="id">The id to map to <paramref name="stored"/>.</param>
+    /// <returns>An asyncronous task which completes with the id assigned to <paramref name="stored"/>.</returns>
+    /// <exception cref="ArgumentException">If <paramref name="id"/> is already present in the table.</exception>
     protected async Task<int> AddInternalBase(TStored stored, int id) {
         // Aquire semaphore to guarantee exclusive access to the table.
         await syncSemaphore.WaitAsync().ConfigureAwait(false);
         bool added = table.TryAdd(KeyUtils.GetKey(id), stored);
         syncSemaphore.Release();
 
-        // If the it was added return it's id
-        if (added && stored is not null) return id;
-        // Otherwise throw exception
-        throw new ArgumentException("The provided id already exists in the table.");
-    }
-    /// <summary>
-    /// Helper method to get a <typeparamref name="TStored"/> from the 
-    /// <see cref="AbstractTable{TInput, TStored}"/> by it's <paramref name="key"/>.
-    /// </summary>
-    /// <param name="key">The key of the <typeparamref name="TStored"/> to get.</param>
-    /// <returns>An asyncronous task which completes with a two tuple containing the <typeparamref name="TStored"/> 
-    /// mapped to the provided <paramref name="key"/> if the key existed in the <see cref="AbstractTable{TInput, TStored}"/>,
-    /// otherwise the <see langword="default"/> of <typeparamref name="TStored"/> and a flag indicating whether it existed.</returns>
-    protected async Task<(TStored? stored, bool got)> GetInternal(ReadOnlyMemory<byte> key) {
-        // Aquire semaphore to guarantee exclusive access to the table.
-        await syncSemaphore.WaitAsync().ConfigureAwait(false);
-        bool got = table.TryGet(key.Span, out TStored? stored);
-        syncSemaphore.Release();
-        return (got ? stored : default, got);
+        // If the entry could not be added to the table the id must already be in use
+        if (!added) throw new ArgumentException("The provided id already exists in the table.");
+        else return id;
     }
 }

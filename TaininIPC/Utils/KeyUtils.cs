@@ -25,7 +25,20 @@ public static class KeyUtils {
     /// <returns>The key representation of the <paramref name="id"/>.</returns>
     public static ReadOnlyMemory<byte> GetKey(short id) {
         byte[] key = new byte[sizeof(short)];
-        BinaryPrimitives.WriteInt32BigEndian(key, id);
+        BinaryPrimitives.WriteInt16BigEndian(key, id);
         return key;
     }
+
+    /// <summary>
+    /// Utility function which converts a key back into it's <see langword="int"/> id form.
+    /// </summary>
+    /// <param name="key">The key to convert.</param>
+    /// <returns>The id form of the given <paramref name="key"/>.</returns>
+    public static int GetIntId(ReadOnlyMemory<byte> key) => BinaryPrimitives.ReadInt32BigEndian(key.Span);
+    /// <summary>
+    /// Utility function which converts a key back into it's <see langword="short"/> id form.
+    /// </summary>
+    /// <param name="key">The key to convert.</param>
+    /// <returns>The id form of the given <paramref name="key"/>.</returns>
+    public static short GetShortId(ReadOnlyMemory<byte> key) => BinaryPrimitives.ReadInt16BigEndian(key.Span);
 }

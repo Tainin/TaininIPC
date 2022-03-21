@@ -1,12 +1,15 @@
 ﻿using System.Runtime.InteropServices;
+using TaininIPC.CritBitTree.Interface;
+using TaininIPC.Utils;
 
-namespace TaininIPC.Utils;
+namespace TaininIPC.CritBitTree;
 
 /// <summary>
 /// Represents an associative array backed internally by a critical bit binary tree.
 /// </summary>
-/// <typeparam name="T">The type of data to be stored in the tree.</typeparam>
-public sealed class CritBitTree<T> {
+/// <typeparam name="TKey">The type of key to use in the tree.</typeparam>
+/// <typeparam name="TValue">The type of data to be stored in the tree.</typeparam>
+public sealed class CritBitTree<TKey, TValue> : ICritBitTree<TKey, TValue> where TKey : ICritBitKey {
     /// <summary>
     /// Marker interface to give node types a common parent type.
     /// This is probably not a best practive however it does a good job of providing discriminated union
@@ -54,76 +57,44 @@ public sealed class CritBitTree<T> {
         /// <summary>
         /// The full key associated with the node.
         /// </summary>
-        public ReadOnlyMemory<byte> Key { get; }
+        public TKey Key { get; }
         /// <summary>
         /// The value associated with the node.
         /// </summary>
-        public T Value { get; set; }
+        public TValue Value { get; set; }
 
-        public LeafNode(ReadOnlyMemory<byte> key, T value) {
+        public LeafNode(TKey key, TValue value) {
             Value = value ?? throw new ArgumentNullException(nameof(value));
             Key = key;
         }
     }
 
-    /// <summary>
-    /// Gets an enumerable over all of the keys in the tree in left to right depth first order.
-    /// </summary>
-    public IEnumerable<ReadOnlyMemory<byte>> Keys => GetLeafNodes(root).Select(t => t.Key);
-    /// <summary>
-    /// Gets an enumerable over all of the values in the tree in left to right depth first order.
-    /// </summary>
-    public IEnumerable<T> Values => GetLeafNodes(root).Select(t => t.Value);
-    /// <summary>
-    /// Gets an enumerable over all of the key value pairs in the tree in left to right depth first order.
-    /// </summary>
-    public IEnumerable<(ReadOnlyMemory<byte> Key, T Value)> Pairs => GetLeafNodes(root).Select(t => (t.Key, t.Value));
+    /// <inheritdoc cref="ICritBitTree{TKey, TValue}.Keys"/>
+    public IEnumerable<TKey> Keys => GetLeafNodes(root).Select(t => t.Key);
+    /// <inheritdoc cref="ICritBitTree{TKey, TValue}.Pairs"/>
+    public IEnumerable<(TKey Key, TValue Value)> Pairs => GetLeafNodes(root).Select(t => (t.Key, t.Value));
+    /// <inheritdoc cref="ICritBitTree{TKey, TValue}.Values"/>
+    public IEnumerable<TValue> Values => GetLeafNodes(root).Select(t => t.Value);
 
     private INode? root;
 
+    /// <summary>
+    /// Initializes a new <see cref="CritBitTree{TKey, TValue}"/>
+    /// </summary>
     public CritBitTree() { }
 
-    /// <summary>
-    /// Attempts to retrieve the value associated with the specified <paramref name="key"/> 
-    /// from the tree and copy it to the <paramref name="value"/> parameter
-    /// </summary>
-    /// <param name="key">The key associated with the value to get.</param>
-    /// <param name="value">If the <paramref name="key"/> was found, contains the associated value on return.
-    /// Otherwise, the default value of the type of <paramref name="value"/> parameter.</param>
-    /// <returns><see langword="false"/> if <paramref name="key"/> was not found in the tree. <see langword="true"/> otherwise</returns>
-    public bool TryGet(ReadOnlySpan<byte> key, out T? value) {
-        if (root is null) return UtilityFunctions.DefaultAndFalse(out value);
-
+    /// <inheritdoc cref="ICritBitTree{TKey, TValue}.Clear"/>
+    public void Clear() => root = null;
+    /// <inheritdoc cref="ICritBitTree{TKey, TValue}.ContainsKey(TKey)"/>
+    public bool ContainsKey(TKey key) {
+        if (root is null) return false;
         //get the closest match for the given key
-        LeafNode leafNode = FindClosestMatch(key, root);
-
-        //if the keys don't match set the out value to default and return false
-        if (!key.SequenceEqual(leafNode.Key.Span)) 
-            return UtilityFunctions.DefaultAndFalse(out value);
-        value = leafNode.Value; //set the out value to the found node's value
-        return true;
-    }
-
-    /// <summary>
-    /// Checks whether the specified <paramref name="key"/> is present in the tree.
-    /// </summary>
-    /// <param name="key"></param>
-    /// <returns><see langword="true"/> if <paramref name="key"/> is present in the tree. <see langword="false"/> otherwise.</returns>
-    public bool ContainsKey(ReadOnlySpan<byte> key) {
-        if (root == null) return false;
-        //get the closest match for the given key
-        LeafNode leafNode = FindClosestMatch(key, root);
+        LeafNode leafNode = FindClosestMatch(key.Span, root);
         //if the keys match return true. false otherwise
-        return key.SequenceEqual(leafNode.Key.Span);
+        return key.Span.SequenceEqual(leafNode.Key.Span);
     }
-
-    /// <summary>
-    /// Attempts to add the specified key and value to the tree.
-    /// </summary>
-    /// <param name="key">The key of the element to add.</param>
-    /// <param name="value">The value of the element to add.</param>
-    /// <returns><see langword="false"/> if <paramref name="key"/> was already present in the tree. <see langword="true"/> otherwise.</returns>
-    public bool TryAdd(ReadOnlyMemory<byte> key, T value) {
+    /// <inheritdoc cref="ICritBitTree{TKey, TValue}.TryAdd(TKey, TValue)"/>
+    public bool TryAdd(TKey key, TValue value) {
         //if root is null insert the new key and value as root
         if (root is null) {
             root = new LeafNode(key, value);
@@ -154,7 +125,7 @@ public sealed class CritBitTree<T> {
 
             //otherwise the branch index that of the first byte which is not equal between the two keys
             if (leafKeySpan[branchIndex] != keySpan[branchIndex]) {
-                newMask = (uint) (leafKeySpan[branchIndex] ^ keySpan[branchIndex]);
+                newMask = (uint)(leafKeySpan[branchIndex] ^ keySpan[branchIndex]);
                 foundBranchPoint = true;
                 break;
             }
@@ -221,50 +192,39 @@ public sealed class CritBitTree<T> {
         else parent.Right = newNode;
         return true;
     }
-
-    /// <summary>
-    /// Attempts to change the value associated with <paramref name="key"/>.
-    /// </summary>
-    /// <param name="key">The key which should have it's value updated.</param>
-    /// <param name="newValue">The new value.</param>
-    /// <returns><see langword="false"/> if <paramref name="key"/> was not found in the tree. <see langword="true"/> otherwise.</returns>
-    public bool TryUpdate(ReadOnlySpan<byte> key, T newValue) {
-        if (root is null) return false;
+    /// <inheritdoc cref="ICritBitTree{TKey, TValue}.TryGet(TKey, out TValue?)"/>
+    public bool TryGet(TKey key, out TValue? value) {
+        if (root is null) return UtilityFunctions.DefaultAndFalse(out value);
 
         //get the closest match for the given key
-        LeafNode leafNode = FindClosestMatch(key, root);
-        //if the keys don't match there is no match anywhere in the tree
-        if (!key.SequenceEqual(leafNode.Key.Span)) return false;
+        LeafNode leafNode = FindClosestMatch(key.Span, root);
 
-        leafNode.Value = newValue; //update the value
+        //if the keys don't match set the out value to default and return false
+        if (!key.Span.SequenceEqual(leafNode.Key.Span))
+            return UtilityFunctions.DefaultAndFalse(out value);
+        value = leafNode.Value; //set the out value to the found node's value
         return true;
     }
-
-    /// <summary>
-    /// Attempts to remove an element from the tree and copy it's <c>Value</c> to the <paramref name="value"/> parameter.
-    /// </summary>
-    /// <param name="key">The key of the element to remove.</param>
-    /// <param name="value">If present, the <c>Value</c> associated with the given <paramref name="key"/>.
-    /// Otherwise the default value of <c>T</c>.</param>
-    /// <returns><see langword="false"/> if <paramref name="key"/> was not found in the tree. <see langword="true"/> otherwise.</returns>
-    public bool TryPop(ReadOnlySpan<byte> key, out T? value) {
+    /// <inheritdoc cref="ICritBitTree{TKey, TValue}.TryPop(TKey, out TValue?)"/>
+    public bool TryPop(TKey key, out TValue? value) {
         //if root is null the given key does not exist in the tree
         if (root is null) return UtilityFunctions.DefaultAndFalse(out value);
 
 
         //initialize variables
-        int keyLength = key.Length;
+        ReadOnlySpan<byte> keySpan = key.Span;
+        int keyLength = keySpan.Length;
         (INode curr, INode? parent, INode? grandParent) = (root, null, null);
         (int parentDirection, int grandParentDirection) = (-1, -1);
 
         while (curr is InternalNode currInternal) { //loop until leaf node is reached
             //get the byte of the key at the index specified in the current node. 0 if index out of range.
-            byte criticalByte = currInternal.Index < keyLength ? key[currInternal.Index] : (byte)0;
+            byte criticalByte = currInternal.Index < keyLength ? keySpan[currInternal.Index] : (byte)0;
             //the direction can be extracted from the critical byte using the mask of the current node.
             int direction = (1 + (currInternal.Mask | criticalByte)) >> 8;
 
             //shift parent and grandparent down
-            (grandParent, parent) = (parent, curr); 
+            (grandParent, parent) = (parent, curr);
             (grandParentDirection, parentDirection) = (parentDirection, direction);
 
             //move down the tree based on the direction
@@ -274,7 +234,7 @@ public sealed class CritBitTree<T> {
         LeafNode leafNode = (LeafNode)curr; //get terminal node
 
         //return false if the passed key does not match the key that was passed in as there is no match anywhere in the tree
-        if (!key.SequenceEqual(leafNode.Key.Span))
+        if (!keySpan.SequenceEqual(leafNode.Key.Span))
             return UtilityFunctions.DefaultAndFalse(out value);
 
         value = leafNode.Value; //set out parameter
@@ -300,32 +260,36 @@ public sealed class CritBitTree<T> {
 
         return true;
     }
+    /// <inheritdoc cref="ICritBitTree{TKey, TValue}.TryRemove(TKey)"/>
+    public bool TryRemove(TKey key) => TryPop(key, out _);
+    /// <inheritdoc cref="ICritBitTree{TKey, TValue}.TryUpdate(TKey, TValue)"/>
+    public bool TryUpdate(TKey key, TValue newValue) {
+        if (root is null) return false;
+
+        ReadOnlySpan<byte> keySpan = key.Span;
+
+        //get the closest match for the given key
+        LeafNode leafNode = FindClosestMatch(keySpan, root);
+        //if the keys don't match there is no match anywhere in the tree
+        if (!keySpan.SequenceEqual(leafNode.Key.Span)) return false;
+
+        leafNode.Value = newValue; //update the value
+        return true;
+    }
 
     /// <summary>
-    /// Attempts to remove an element from the tree.
+    /// Locates the <see cref="LeafNode"/> which is closest to where <paramref name="keySpan"/> would appear in the tree.
+    /// If <paramref name="keySpan"/> is present in the tree it's associated <see cref="LeafNode"/> is the located node.
     /// </summary>
-    /// <param name="key">The key of the element to remove.</param>
-    /// <returns><see langword="false"/> if <paramref name="key"/> was not found in the tree. <see langword="true"/> otherwise.</returns>
-    public bool TryRemove(ReadOnlySpan<byte> key) => TryPop(key, out _);
-
-    /// <summary>
-    /// Clears all contents of the tree.
-    /// </summary>
-    public void Clear() => root = null;
-
-    /// <summary>
-    /// Locates the <see cref="LeafNode"/> which is closest to where <paramref name="key"/> would appear in the tree.
-    /// If <paramref name="key"/> is present in the tree it's associated <see cref="LeafNode"/> is the located node.
-    /// </summary>
-    /// <param name="key">The key to use search for.</param>
+    /// <param name="keySpan">The key to use search for.</param>
     /// <param name="node">The <see cref="INode"/> to start at.</param>
     /// <returns>The located <see cref="LeafNode"/>.</returns>
-    private static LeafNode FindClosestMatch(ReadOnlySpan<byte> key, INode node) {
-        int keyLength = key.Length;
+    private static LeafNode FindClosestMatch(ReadOnlySpan<byte> keySpan, INode node) {
+        int keyLength = keySpan.Length;
 
         while (node is InternalNode currInternal) { //Loop until leaf node is reached
             //get the byte of the key at the index specified in the current node. 0 if index out of range.
-            byte criticalByte = currInternal.Index < keyLength ? key[currInternal.Index] : (byte)0;
+            byte criticalByte = currInternal.Index < keyLength ? keySpan[currInternal.Index] : (byte)0;
             //the direction can be extracted from the critical byte using the mask of the current node.
             int direction = (1 + (currInternal.Mask | criticalByte)) >> 8;
             //move down the tree based on the direction
@@ -358,6 +322,9 @@ public sealed class CritBitTree<T> {
     }
 
     //TODO: REMOVE THIS
+    /// <summary>
+    /// Debugging tool. Not for final version.
+    /// </summary>
     public void PrintAll() {
         static string KeyToString(ReadOnlyMemory<byte> key) =>
             string.Join(' ', Enumerable.Range(0, key.Length).Select(i => Convert.ToString(key.Span[i], 2).PadLeft(8, '0')));
@@ -378,7 +345,7 @@ public sealed class CritBitTree<T> {
             Console.Write(string.Join("", Enumerable.Repeat("|  ", indent)));
 
             if (node is LeafNode leafNode) {
-                Console.Write(KeyToString(leafNode.Key));
+                Console.Write(KeyToString(leafNode.Key.Memory));
                 Console.Write(' ');
                 Console.WriteLine(leafNode.Value);
             }

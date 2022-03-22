@@ -1,4 +1,7 @@
-﻿using TaininIPC.Utils;
+﻿using System.Diagnostics.CodeAnalysis;
+using TaininIPC.CritBitTree;
+using TaininIPC.CritBitTree.Keys;
+using TaininIPC.Utils;
 
 namespace TaininIPC.Data.Serialized;
 
@@ -8,7 +11,12 @@ namespace TaininIPC.Data.Serialized;
 public sealed class MultiFrame {
 
     // Internal map of Frames
-    private readonly CritBitTree<Frame> subFrames;
+    private readonly CritBitTree<Int16Key, Frame> subFrames;
+
+    /// <summary>
+    /// Gets an <see cref="IEnumerable{T}"/> over all the <see cref="Frame"/> instances in the <see cref="MultiFrame"/>.
+    /// </summary>
+    public IEnumerable<(Int16Key, Frame Frame)> AllFrames => subFrames.Pairs;
 
     /// <summary>
     /// Initializes a new empty <see cref="MultiFrame"/>.
@@ -16,78 +24,36 @@ public sealed class MultiFrame {
     public MultiFrame() => subFrames = new();
 
     /// <summary>
-    /// Gets an <see cref="IEnumerable{T}"/> over all the <see cref="Frame"/> instances in the <see cref="MultiFrame"/>.
+    /// Creates a new sub <see cref="Frame"/> and attemtps to add it to the <see cref="MultiFrame"/> with the
+    /// given <paramref name="key"/>
     /// </summary>
-    public IEnumerable<(ReadOnlyMemory<byte> Key, Frame Frame)> AllFrames => subFrames.Pairs;
-
+    /// <param name="key">The key to map to the created <see cref="Frame"/>.</param>
+    /// <param name="frame">Contains the created <see cref="Frame"/> on return.</param>
+    /// <returns><see langword="true"/> if the created <paramref name="frame"/> could be added 
+    /// to the <see cref="MultiFrame"/>, false if the <paramref name="key"/> already exists.</returns>
+    public bool TryCreate(Int16Key key, out Frame frame) => subFrames.TryAdd(key, frame = new());
     /// <summary>
-    /// Creates a new sub <see cref="Frame"/> with the given <paramref name="id"/>.
-    /// </summary>
-    /// <param name="id">The id to map to the created <see cref="Frame"/></param>
-    /// <returns>The created frame.</returns>
-    public Frame Create(short id) => CreateInternal(KeyUtils.GetKey(id));
-    /// <summary>
-    /// Creates a new sub <see cref="Frame"/> with the given <paramref name="key"/>.
-    /// </summary>
-    /// <param name="key">The key to map to the created <see cref="Frame"/></param>
-    /// <returns>The created frame.</returns>
-    public Frame Create(ReadOnlyMemory<byte> key) => CreateInternal(key);
-    /// <summary>
-    /// Gets the <see cref="Frame"/> associated with the specified <paramref name="id"/>.
-    /// </summary>
-    /// <param name="id">The id of the <see cref="Frame"/> to get.</param>
-    /// <returns>The <see cref="Frame"/> associated with the specified <paramref name="id"/>.</returns>
-    public Frame Get(short id) => Get(KeyUtils.GetKey(id));
-    /// <summary>
-    /// Gets the <see cref="Frame"/> associated with the specified <paramref name="key"/>.
+    /// Attempts to get the <see cref="Frame"/> mapped to by the given <paramref name="key"/>.
     /// </summary>
     /// <param name="key">The key of the <see cref="Frame"/> to get.</param>
-    /// <returns>The <see cref="Frame"/> associated with the specified <paramref name="key"/>.</returns>
-    /// <exception cref="InvalidOperationException">If the specified <paramref name="key"/> does not exist.</exception>
-    private Frame Get(ReadOnlyMemory<byte> key) => subFrames.TryGet(key.Span, out Frame? frame) ? frame! :
-        throw new InvalidOperationException($"The specified key does not exist in the {nameof(MultiFrame)}");
+    /// <param name="frame">Contains the <see cref="Frame"/> mapped to by the <paramref name="key"/> on return if it exists.</param>
+    /// <returns><see langword="true"/> if the <paramref name="key"/> exists, <see langword="false"/> otherwise.</returns>
+    public bool TryGet(Int16Key key, [NotNullWhen(true)]out Frame? frame) => subFrames.TryGet(key, out frame);
     /// <summary>
-    /// Checks if the specified <paramref name="id"/> is present in the <see cref="MultiFrame"/>.
-    /// </summary>
-    /// <param name="id">The id to check for.</param>
-    /// <returns><see langword="true"/> if the specified <paramref name="id"/> is present in the <see cref="MultiFrame"/>,
-    /// <see langword="false"/> otherwise.</returns>
-    public bool ContainsId(short id) => ContainsKey(KeyUtils.GetKey(id));
-    /// <summary>
-    /// Checks if the specified <paramref name="key"/> is present in the <see cref="MultiFrame"/>.
+    /// Checks if the given <paramref name="key"/> exists in the <see cref="MultiFrame"/>.
     /// </summary>
     /// <param name="key">The key to check for.</param>
-    /// <returns><see langword="true"/> if the specified <paramref name="key"/> is present in the <see cref="MultiFrame"/>,
-    /// <see langword="false"/> otherwise.</returns>
-    public bool ContainsKey(ReadOnlyMemory<byte> key) => subFrames.ContainsKey(key.Span);
+    /// <returns><see langword="true"/> if the <paramref name="key"/> exists, <see langword="false"/> otherwise.</returns>
+    public bool ContainsKey(Int16Key key) => subFrames.ContainsKey(key);
     /// <summary>
-    /// Removes the <see cref="Frame"/> associated with the specified <paramref name="id"/>
+    /// Attempts to remove the <see cref="Frame"/> mapped to by the given <paramref name="key"/> from the <see cref="MultiFrame"/>.
     /// </summary>
-    /// <param name="id">The id of the <see cref="Frame"/> to remove</param>
-    public void Remove(short id) => Remove(KeyUtils.GetKey(id));
-    /// <summary>
-    /// Removes the <see cref="Frame"/> associated with the specified <paramref name="key"/>
-    /// </summary>
-    /// <param name="key">The key of the <see cref="Frame"/> to remove.</param>
-    /// <exception cref="InvalidOperationException">If the specified <paramref name="key"/> does not exist.</exception>
-    public void Remove(ReadOnlyMemory<byte> key) {
-        if (subFrames.TryRemove(key.Span)) return;
-        else throw new InvalidOperationException($"The specified key does not exist in the {nameof(MultiFrame)}");
-    }
+    /// <param name="key">The <paramref name="key"/> of the <see cref="Frame"/> to remove.</param>
+    /// <returns><see langword="true"/> if the <paramref name="key"/> existed in the table 
+    /// and was removed, <see langword="false"/> otherwise.</returns>
+    public bool TryRemove(Int16Key key) => subFrames.TryRemove(key);
     /// <summary>
     /// Removes all <see cref="Frame"/> instances from the <see cref="MultiFrame"/>.
     /// </summary>
     public void Clear() => subFrames.Clear();
-
-    /// <summary>
-    /// Helper method to create a new sub <see cref="Frame"/> with the given <paramref name="key"/>.
-    /// </summary>
-    /// <param name="key">The key to map to the created <see cref="Frame"/></param>
-    /// <returns>The created frame.</returns>
-    /// <exception cref="InvalidOperationException">If the given key is already taken.</exception>
-    private Frame CreateInternal(ReadOnlyMemory<byte> key) {
-        Frame frame = new();
-        if (subFrames.TryAdd(key[..sizeof(short)], frame)) return frame;
-        else throw new InvalidOperationException($"The specified key already exists in the {nameof(MultiFrame)}");
-    }
 }

@@ -18,7 +18,7 @@ public sealed class CritBitTree<TKey, TValue> : ICritBitTree<TKey, TValue> where
     private interface INode { }
 
     /// <summary>
-    /// Represents an internal (non-leaf) node of a <see cref="CritBitTree{T}"/>
+    /// Represents an internal (non-leaf) node of a <see cref="CritBitTree{TKey, TValue}"/>
     /// </summary>
     [StructLayout(LayoutKind.Auto, Pack = 1)]
     private sealed class InternalNode : INode {
@@ -50,7 +50,7 @@ public sealed class CritBitTree<TKey, TValue> : ICritBitTree<TKey, TValue> where
     }
 
     /// <summary>
-    /// Represents a leaf (value containing) node of a <see cref="CritBitTree{T}"/>
+    /// Represents a leaf (value containing) node of a <see cref="CritBitTree{TKey, TValue}"/>
     /// </summary>
     [StructLayout(LayoutKind.Auto, Pack = 1)]
     private sealed class LeafNode : INode {
@@ -192,7 +192,7 @@ public sealed class CritBitTree<TKey, TValue> : ICritBitTree<TKey, TValue> where
         else parent.Right = newNode;
         return true;
     }
-    /// <inheritdoc cref="ICritBitTree{TKey, TValue}.TryGet(TKey, out TValue?)"/>
+    /// <inheritdoc cref="ICritBitTree{TKey, TValue}.TryGet(TKey, out TValue)"/>
     public bool TryGet(TKey key, out TValue? value) {
         if (root is null) return UtilityFunctions.DefaultAndFalse(out value);
 
@@ -205,7 +205,7 @@ public sealed class CritBitTree<TKey, TValue> : ICritBitTree<TKey, TValue> where
         value = leafNode.Value; //set the out value to the found node's value
         return true;
     }
-    /// <inheritdoc cref="ICritBitTree{TKey, TValue}.TryPop(TKey, out TValue?)"/>
+    /// <inheritdoc cref="ICritBitTree{TKey, TValue}.TryPop(TKey, out TValue)"/>
     public bool TryPop(TKey key, out TValue? value) {
         //if root is null the given key does not exist in the tree
         if (root is null) return UtilityFunctions.DefaultAndFalse(out value);

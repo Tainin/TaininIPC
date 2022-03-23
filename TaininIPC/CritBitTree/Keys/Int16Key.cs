@@ -16,7 +16,7 @@ public sealed class Int16Key : AbstractCritBitKey<short> {
     /// Initializes an <see cref="Int16Key"/> from it's memory representation.
     /// </summary>
     /// <param name="key">The memory to initialize the key from.</param>
-    public Int16Key(ReadOnlyMemory<byte> key) : base(key) { }
+    public Int16Key(ReadOnlyMemory<byte> key) : base(key[..sizeof(short)]) { }
 
     /// <inheritdoc cref="AbstractCritBitKey{T}.CalculateId"/>
     protected override short CalculateId() => BinaryPrimitives.ReadInt16BigEndian(Memory.Span);

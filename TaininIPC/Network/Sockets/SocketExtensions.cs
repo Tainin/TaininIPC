@@ -31,6 +31,6 @@ public static class SocketExtensions {
         int offset = 0;
         int length = buffer.Length;
         while (offset < length)
-            await socket.ReceiveAsync(buffer[offset..^0], SocketFlags.None, cancellationToken).ConfigureAwait(false);
+            offset += await socket.ReceiveAsync(buffer[offset..^0], SocketFlags.None, cancellationToken).ConfigureAwait(false);
     }
 }

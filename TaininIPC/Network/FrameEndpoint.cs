@@ -1,4 +1,5 @@
 ﻿using TaininIPC.Client;
+using TaininIPC.CritBitTree.Keys;
 using TaininIPC.Data.Protocol;
 using TaininIPC.Data.Serialized;
 
@@ -115,11 +116,10 @@ public class FrameEndpoint {
         if ((FrameInstruction)chunk.Instruction is FrameInstruction.EndMultiFrame)
             return IncomingFrameState.Complete;
 
-        // If start of sub Frame has been reached initialize new workingFrame and reutrn Frame status
-        if ((FrameInstruction)chunk.Instruction is FrameInstruction.StartFrame) {
-            workingFrame = workingMultiFrame.Create(chunk.Data);
-            return IncomingFrameState.Frame;
-        }
+        // If start of sub Frame has been reached initialize new workingFrame and return Frame status
+        if ((FrameInstruction)chunk.Instruction is FrameInstruction.StartFrame)
+            if (workingMultiFrame.TryCreate(new(chunk.Data), out workingFrame))
+                return IncomingFrameState.Frame;
 
         // Otherwise return Error status
         return IncomingFrameState.Error;
@@ -153,8 +153,8 @@ public class FrameEndpoint {
     /// which can be used to rebuild the provided <see cref="MultiFrame"/></returns>
     private static IEnumerable<NetworkChunk> SerializeMultiFrame(MultiFrame multiFrame) {
         yield return FrameChunks.StartMultiFrame;
-        foreach ((ReadOnlyMemory<byte> key, Frame frame) in multiFrame.AllFrames) {
-            yield return FrameChunks.StartFrame(key);
+        foreach ((Int16Key key, Frame frame) in multiFrame.AllFrames) {
+            yield return FrameChunks.StartFrame(key.Memory);
             foreach (ReadOnlyMemory<byte> buffer in frame.AllBuffers)
                 yield return FrameChunks.AppendBuffer(buffer);
             yield return FrameChunks.EndFrame;

@@ -19,7 +19,8 @@ public sealed class RoutingTable : AbstractTable<IRouter, IRouter>, IRouter {
 
     /// <inheritdoc cref="IRouter.RouteFrame(MultiFrame, EndpointTableEntry)"/>
     public async Task RouteFrame(MultiFrame frame, EndpointTableEntry origin) {
-        Int32Key routingKey = new(Protocol.ExtractRoutingKey(frame));
+        if (!Protocol.TryGetRoutingKey(frame, out Int32Key? routingKey)) return;
+
         Attempt<IRouter> routerAttempt = await TryGet(routingKey).ConfigureAwait(false);
         if (routerAttempt.TryResult(out IRouter? router))
             await router!.RouteFrame(frame, origin).ConfigureAwait(false);

@@ -22,9 +22,9 @@ public interface INameMappedTable<TInput, TStored> : ITable<TInput, TStored> whe
     /// Attempts to remove the name mapping from <paramref name="nameKey"/> to it's key.
     /// </summary>
     /// <param name="nameKey">The name to un-map.</param>
-    /// <returns>An asyncronous task which completes with <see langword="true"/> if the name mapping could be removed, 
-    /// and <see langword="false"/> if <paramref name="nameKey"/> does not exist in the table.</returns>
-    public Task<bool> TryRemoveName(StringKey nameKey);
+    /// <returns>An asyncronous task which completes with an <see cref="Attempt{T}"/> representing the key which <paramref name="nameKey"/>
+    /// had mapped to, if it was removed.</returns>
+    public Task<Attempt<Int32Key>> TryRemoveName(StringKey nameKey);
     /// <summary>
     /// Attempts to remove the name mapping to <paramref name="key"/> from it's <paramref name="key"/>.
     /// </summary>

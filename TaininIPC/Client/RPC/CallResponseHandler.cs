@@ -25,7 +25,7 @@ public sealed class CallResponseHandler : IRouter {
         nextFreshIndex = 0;
     }
 
-    public async Task RouteFrame(MultiFrame frame, EndpointTableEntry _) {
+    public async Task RouteFrame(MultiFrame frame, EndpointTableEntry? _) {
         await syncSemaphore.WaitAsync().ConfigureAwait(false);
         try {
             if (!Protocol.TryGetResponseKey(frame, out BasicKey? responseKey)) return;

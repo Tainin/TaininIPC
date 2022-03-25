@@ -45,13 +45,15 @@ public sealed class Attempt<T> where T : notnull {
     }
 
     /// <summary>
-    /// Defines an implicit conversion of a <typeparamref name="T"/> to an <see cref="Attempt{T}"/> 
-    /// where <see cref="T"/> is <typeparamref name="T"/>
+    /// Defines an implicit conversion of a <typeparamref name="T"/> to an <see cref="Attempt{T}"/>.
     /// </summary>
-    /// <param name="result"></param>
+    /// <param name="result">The result to convert to an <see cref="Attempt{T}"/>.</param>
     public static implicit operator Attempt<T>(T? result) => new(result);
 }
 
+/// <summary>
+/// Provides extension methods for <see cref="Attempt{T}"/>.
+/// </summary>
 public static class AttemptExtensions {
     /// <summary>
     /// Converts a <see langword="bool"/> and a <typeparamref name="T"/> to an <see cref="Attempt{T}"/>.

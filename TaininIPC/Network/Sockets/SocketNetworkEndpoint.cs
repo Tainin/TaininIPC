@@ -26,6 +26,9 @@ public sealed class SocketNetworkEndpoint : INetworkEndpoint {
     private static readonly byte DISCONNECT_FLAG = (1 << 2);
     #endregion
 
+    /// <summary>
+    /// Occurs when the status of the endpoint changes.
+    /// </summary>
     public event EventHandler<EndpointStatusChangedEventArgs>? EndpointStatusChanged;
 
     private readonly Socket connection;
@@ -40,6 +43,9 @@ public sealed class SocketNetworkEndpoint : INetworkEndpoint {
     private int status;
     private long keepAliveExpiresAt;
 
+    /// <summary>
+    /// The current status of the endpoint.
+    /// </summary>
     public EndpointStatus Status => (EndpointStatus)Interlocked.CompareExchange(ref status, 0, 0);
 
     /// <summary>
@@ -120,11 +126,20 @@ public sealed class SocketNetworkEndpoint : INetworkEndpoint {
         // Throw any exceptions which may have occured
         if (exception is not null) throw exception;
     }
+    /// <summary>
+    /// Stop the lifetime services of the endpoint.
+    /// </summary>
     public void Stop() {
         // Transition the endpoint to the Stopped status if is not already Stopped or Faulted.
         UpdateStatus(EndpointStatus.Stopped, EndpointStatus.Running);
         cancellationTokenSource.Cancel();
     }
+    /// <summary>
+    /// Send the given <paramref name="chunk"/> across the network.
+    /// </summary>
+    /// <param name="chunk">The <see cref="NetworkChunk"/> to send.</param>
+    /// <returns>An asyncronouse task representing the operation.</returns>
+    /// <exception cref="InvalidOperationException">If the endpoint is not currently running.</exception>
     public async Task SendChunk(NetworkChunk chunk) {
         // Ensure that the endpoint is running
         if (Status is not EndpointStatus.Running) throw new InvalidOperationException("Cannot send throug an endpoint which isn't running.");

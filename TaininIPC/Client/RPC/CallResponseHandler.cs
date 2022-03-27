@@ -5,6 +5,7 @@ using TaininIPC.Client.Interface;
 using TaininIPC.CritBitTree;
 using TaininIPC.CritBitTree.Keys;
 using TaininIPC.Data.Serialized;
+using TaininIPC.Protocol;
 
 namespace TaininIPC.Client.RPC;
 
@@ -40,7 +41,7 @@ public sealed class CallResponseHandler : IRouter {
     public async Task RouteFrame(MultiFrame frame, EndpointTableEntry? _) {
         await syncSemaphore.WaitAsync().ConfigureAwait(false);
         try {
-            if (!Protocol.TryGetResponseKey(frame, out BasicKey? responseKey)) return;
+            if (!ProtocolHelper.TryGetResponseKey(frame, out BasicKey? responseKey)) return;
             if (!responseHandlers.TryGet(responseKey, out ResponseHandle? responseHandle)) return;
 
             responseHandle!.Release(frame);
@@ -58,8 +59,8 @@ public sealed class CallResponseHandler : IRouter {
     /// <returns>An asyncronous task which completes with a <see cref="MultiFrame"/> represening the results of the call.</returns>
     public async Task<MultiFrame> Call(EndpointTableEntry endpointTableEntry, MultiFrame frame) {
         (ResponseHandle handle, int index, BasicKey responseKey) = await SetupResponseHandler().ConfigureAwait(false);
-        
-        Protocol.SetResponseKey(frame, responseKey);
+
+        ProtocolHelper.SetResponseKey(frame, responseKey);
         await endpointTableEntry.FrameEndpoint.SendMultiFrame(frame).ConfigureAwait(false);
         MultiFrame response = await handle.WhenResponse().ConfigureAwait(false);
 

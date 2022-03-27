@@ -3,12 +3,12 @@ using TaininIPC.CritBitTree.Keys;
 using TaininIPC.Data.Serialized;
 using TaininIPC.Utils;
 
-namespace TaininIPC.Client;
+namespace TaininIPC.Protocol;
 
 /// <summary>
 /// Contains helper functions for reading and writing protocol related data to and from <see cref="Frame"/> and <see cref="MultiFrame"/> instances.
 /// </summary>
-public static class Protocol {
+public static class ProtocolHelper {
 
     private static readonly Int16Key KEY_ROUTING_KEY = new(-1);
     private static readonly Int16Key KEY_RESPONSE_KEY = new(-2);

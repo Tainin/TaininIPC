@@ -3,6 +3,7 @@ using TaininIPC.Client.Endpoints;
 using TaininIPC.Client.Interface;
 using TaininIPC.CritBitTree.Keys;
 using TaininIPC.Data.Serialized;
+using TaininIPC.Protocol;
 using TaininIPC.Utils;
 
 namespace TaininIPC.Client.Routing;
@@ -36,7 +37,7 @@ public sealed class RoutingTable : AbstractTable<IRouter, IRouter>, IRouter {
     /// <param name="origin">The endpoint which the <paramref name="frame"/> arived through or <see langword="null"/> if it originated locally.</param>
     /// <returns>An asyncronous task representing the operation.</returns>
     public static async Task RouteFrame(ITable<IRouter, IRouter> table, MultiFrame frame, EndpointTableEntry? origin) {
-        if (!Protocol.TryGetRoutingKey(frame, out Int32Key? routingKey)) return;
+        if (!ProtocolHelper.TryGetRoutingKey(frame, out Int32Key? routingKey)) return;
 
         Attempt<IRouter> routerAttempt = await table.TryGet(routingKey).ConfigureAwait(false);
         if (routerAttempt.TryResult(out IRouter? router))

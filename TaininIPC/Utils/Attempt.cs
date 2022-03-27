@@ -1,4 +1,6 @@
-﻿namespace TaininIPC.Utils;
+﻿using System.Diagnostics.CodeAnalysis;
+
+namespace TaininIPC.Utils;
 
 /// <summary>
 /// Represents a potential result in <see cref="Task"/> based <c>Try(Something)</c> style methods where <see langword="out"/>
@@ -19,6 +21,7 @@ public sealed class Attempt<T> where T : notnull {
     /// <summary>
     /// Indicates whether or not there is a result.
     /// </summary>
+    [MemberNotNullWhen(true, nameof(Result))]
     public bool HasResult { get; } = false;
 
     /// <summary>
@@ -29,7 +32,7 @@ public sealed class Attempt<T> where T : notnull {
     /// Initializes a new <see cref="Attempt{T}"/> given the <paramref name="result"/> of the attempt.
     /// </summary>
     /// <param name="result">The result of the attempt.</param>
-    public Attempt(T? result) => (Result, HasResult) = (result, true);
+    public Attempt(T result) => (Result, HasResult) = (result, true);
 
     /// <summary>
     /// Attempts to get the result of the <see cref="Attempt{T}"/>.
@@ -38,7 +41,7 @@ public sealed class Attempt<T> where T : notnull {
     /// Otherwise is undefined.</param>
     /// <returns><see langword="true"/> if the <see cref="Attempt{T}"/> was initialized with a result, 
     /// <see langword="false"/> otherwise.</returns>
-    public bool TryResult(out T? result) {
+    public bool TryResult([NotNullWhen(true)]out T? result) {
         if (!HasResult) return UtilityFunctions.DefaultAndFalse(out result);
         result = Result;
         return true;
@@ -48,7 +51,7 @@ public sealed class Attempt<T> where T : notnull {
     /// Defines an implicit conversion of a <typeparamref name="T"/> to an <see cref="Attempt{T}"/>.
     /// </summary>
     /// <param name="result">The result to convert to an <see cref="Attempt{T}"/>.</param>
-    public static implicit operator Attempt<T>(T? result) => new(result);
+    public static implicit operator Attempt<T>(T result) => new(result);
 }
 
 /// <summary>
@@ -63,7 +66,7 @@ public static class AttemptExtensions {
     /// <param name="result">The result.</param>
     /// <returns>The <see cref="Attempt{T}"/> of <paramref name="hasResult"/> and <paramref name="result"/>.</returns>
     public static Attempt<T> ToAttempt<T>(this bool hasResult, T? result) where T : notnull {
-        if (hasResult) return result;
+        if (hasResult && result is not null) return result;
         return Attempt<T>.Failed;
     }
 }

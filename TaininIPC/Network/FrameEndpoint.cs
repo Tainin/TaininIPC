@@ -1,5 +1,4 @@
 ﻿using TaininIPC.Client;
-using TaininIPC.CritBitTree.Keys;
 using TaininIPC.Data.Frames;
 using TaininIPC.Data.Frames.Serialization;
 using TaininIPC.Data.Protocol;
@@ -10,25 +9,10 @@ namespace TaininIPC.Network;
 /// Provides a higher level endpoint for sending and processing received <see cref="MultiFrame"/> instances
 /// </summary>
 public class FrameEndpoint {
-
-    /// <summary>
-    /// Specifies the state of the incoming <see cref="MultiFrame"/> as of the last received <see cref="NetworkChunk"/>
-    /// </summary>
-    private enum IncomingFrameState {
-        None,
-        MultiFrame,
-        Frame,
-        Complete,
-        Error,
-    }
-
     private readonly ChunkHandler outgoingChunkHandler;
     private readonly MultiFrameHandler incomingFrameHandler;
     private readonly SemaphoreSlim sendSemaphore;
-
-    private MultiFrame workingMultiFrame = null!;
-    private Frame workingFrame = null!;
-    private IncomingFrameState incomingFrameState;
+    private readonly FrameDeserializer frameDeserializer;
 
     /// <summary>
     /// Constructs an instance of the <see cref="FrameEndpoint"/> class from the given handlers.
@@ -42,7 +26,7 @@ public class FrameEndpoint {
         // initialize semaphore to not block the first call to Wait but block all subsequent calls pending the corrisponding Release calls
         sendSemaphore = new(1, 1);
 
-        incomingFrameState = IncomingFrameState.None;
+        frameDeserializer = new();
     }
 
     /// <summary>
@@ -63,86 +47,13 @@ public class FrameEndpoint {
         }
     }
     /// <summary>
-    /// Applies the <see cref="NetworkChunk.Instruction"/> of the provided <see cref="NetworkChunk"/>
-    /// to the current working <see cref="MultiFrame"/>.
+    /// Applies the specified <paramref name="chunk"/> to the deserialization of the current <see cref="MultiFrame"/>
+    /// and calls the handler for incoming frames if the frame was completed.
     /// </summary>
     /// <param name="chunk">The <see cref="NetworkChunk"/> to apply.</param>
     /// <returns>An asyncronous task representing the operation.</returns>
-    /// <exception cref="InvalidOperationException">If the application of the <paramref name="chunk"/> or any previously
-    /// applied chunks resulted in <see cref="IncomingFrameState.Error"/></exception>
     public async Task ApplyChunk(NetworkChunk chunk) {
-        // Choose application behavior based on previous incomingFrameState
-        incomingFrameState = incomingFrameState switch {
-            IncomingFrameState.None => ExpectStartMultiFrame(chunk),
-            IncomingFrameState.MultiFrame => InMultiFrameHandler(chunk),
-            IncomingFrameState.Frame => InFrameHandler(chunk),
-            _ => IncomingFrameState.Error,
-        };
-
-        // If the application resulted in a Completed frame forward it to the incomingFrameHandler and reset the state
-        if (incomingFrameState == IncomingFrameState.Complete) {
-            await incomingFrameHandler(workingMultiFrame).ConfigureAwait(false);
-            incomingFrameState = IncomingFrameState.None;
-        }
-
-        // If there was an error attempt to start a new MultiFrame
-        // Any following chunks that do not start another MultiFrame will continue the Error -> Restart cycle
-        // until the start of a new MultiFrame is reached
-        if (incomingFrameState == IncomingFrameState.Error)
-            incomingFrameState = IncomingFrameState.None;
-    }
-
-    /// <summary>
-    /// Helper function which handles applying chunks when the <see cref="incomingFrameState"/> is <see cref="IncomingFrameState.None"/>
-    /// </summary>
-    /// <param name="chunk">Chunk to apply.</param>
-    /// <returns><see cref="IncomingFrameState.MultiFrame"/> or <see cref="IncomingFrameState.Error"/></returns>
-    private IncomingFrameState ExpectStartMultiFrame(NetworkChunk chunk) {
-        // Return Error state if the instruction was not the expected StartMultiFrame
-        if ((FrameInstruction)chunk.Instruction is not FrameInstruction.StartMultiFrame)
-            return IncomingFrameState.Error;
-
-        // Otherwise initialize new workingMultiFrame and return MultiFrame status
-        workingMultiFrame = new();
-        return IncomingFrameState.MultiFrame;
-    }
-    /// <summary>
-    /// Helper function which handles applying chunks when the <see cref="incomingFrameState"/> is <see cref="IncomingFrameState.MultiFrame"/>
-    /// </summary>
-    /// <param name="chunk">Chunk to apply.</param>
-    /// <returns><see cref="IncomingFrameState.Complete"/>, <see cref="IncomingFrameState.Frame"/>
-    /// or <see cref="IncomingFrameState.Error"/></returns>
-    private IncomingFrameState InMultiFrameHandler(NetworkChunk chunk) {
-        // If end of MultiFrame has been reached reutrn Complete status
-        if ((FrameInstruction)chunk.Instruction is FrameInstruction.EndMultiFrame)
-            return IncomingFrameState.Complete;
-
-        // If start of sub Frame has been reached initialize new workingFrame and return Frame status
-        if ((FrameInstruction)chunk.Instruction is FrameInstruction.StartFrame)
-            if (workingMultiFrame.TryCreate(new(chunk.Data), out workingFrame))
-                return IncomingFrameState.Frame;
-
-        // Otherwise return Error status
-        return IncomingFrameState.Error;
-    }
-    /// <summary>
-    /// Helper function which handles applying chunks when the <see cref="incomingFrameState"/> is <see cref="IncomingFrameState.Frame"/>
-    /// </summary>
-    /// <param name="chunk">Chunk to apply.</param>
-    /// <returns><see cref="IncomingFrameState.MultiFrame"/>, <see cref="IncomingFrameState.Error"/>
-    /// or <see cref="IncomingFrameState.Error"/></returns>
-    private IncomingFrameState InFrameHandler(NetworkChunk chunk) {
-        // If end of Frame has been reached return back up to MultiFrame status
-        if ((FrameInstruction)chunk.Instruction is FrameInstruction.EndFrame)
-            return IncomingFrameState.MultiFrame;
-
-        // If a buffer has been reached insert the chunks data into the workingFrame and stay in Frame state
-        if ((FrameInstruction)chunk.Instruction is FrameInstruction.AppendBuffer) {
-            workingFrame.Insert(chunk.Data, ^1);
-            return IncomingFrameState.Frame;
-        }
-
-        // Otherwise return Error state
-        return IncomingFrameState.Error;
+        if (frameDeserializer.ApplyChunk(chunk, out MultiFrame? frame))
+            await incomingFrameHandler(frame).ConfigureAwait(false);
     }
 }

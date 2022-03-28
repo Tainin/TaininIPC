@@ -1,6 +1,7 @@
 ﻿using TaininIPC.Client;
 using TaininIPC.CritBitTree.Keys;
 using TaininIPC.Data.Frames;
+using TaininIPC.Data.Frames.Serialization;
 using TaininIPC.Data.Protocol;
 
 namespace TaininIPC.Network;
@@ -55,7 +56,7 @@ public class FrameEndpoint {
             // Use semaphore to ensure multiple franes don't get interlaced
             await sendSemaphore.WaitAsync().ConfigureAwait(false);
             // Loop through all NetworkChunk instances and forward them to the outgoingChunkHandler
-            foreach (NetworkChunk chunk in SerializeMultiFrame(multiFrame))
+            foreach (NetworkChunk chunk in FrameSerializer.SerializeMultiFrame(multiFrame))
                 await outgoingChunkHandler(chunk).ConfigureAwait(false);
         } finally {
             sendSemaphore.Release();
@@ -143,22 +144,5 @@ public class FrameEndpoint {
 
         // Otherwise return Error state
         return IncomingFrameState.Error;
-    }
-
-    /// <summary>
-    /// Helper method to transform a <see cref="MultiFrame"/> into an <see cref="IEnumerable{T}"/> of <see cref="NetworkChunk"/> instances.
-    /// </summary>
-    /// <param name="multiFrame">The <see cref="MultiFrame"/> to transform.</param>
-    /// <returns>An <see cref="IEnumerable{T}"/> of <see cref="NetworkChunk"/> instances
-    /// which can be used to rebuild the provided <see cref="MultiFrame"/></returns>
-    private static IEnumerable<NetworkChunk> SerializeMultiFrame(MultiFrame multiFrame) {
-        yield return FrameChunks.StartMultiFrame;
-        foreach ((Int16Key key, Frame frame) in multiFrame.AllFrames) {
-            yield return FrameChunks.StartFrame(key.Memory);
-            foreach (ReadOnlyMemory<byte> buffer in frame.AllBuffers)
-                yield return FrameChunks.AppendBuffer(buffer);
-            yield return FrameChunks.EndFrame;
-        }
-        yield return FrameChunks.EndMultiFrame;
     }
 }

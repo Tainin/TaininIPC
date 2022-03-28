@@ -1,7 +1,7 @@
 ﻿using TaininIPC.Client.Abstract;
 using TaininIPC.Client.Endpoints;
 using TaininIPC.Client.Interface;
-using TaininIPC.Data.Serialized;
+using TaininIPC.Data.Frames;
 
 namespace TaininIPC.Client.Routing;
 

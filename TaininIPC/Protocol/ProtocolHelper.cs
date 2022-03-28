@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using TaininIPC.CritBitTree.Keys;
-using TaininIPC.Data.Serialized;
+using TaininIPC.Data.Frames;
 using TaininIPC.Utils;
 
 namespace TaininIPC.Protocol;

@@ -1,4 +1,4 @@
-﻿using TaininIPC.Data.Serialized;
+﻿using TaininIPC.Data.Frames;
 
 namespace TaininIPC.Client.RPC;
 

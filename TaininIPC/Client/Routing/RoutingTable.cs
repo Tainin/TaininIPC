@@ -2,7 +2,7 @@
 using TaininIPC.Client.Endpoints;
 using TaininIPC.Client.Interface;
 using TaininIPC.CritBitTree.Keys;
-using TaininIPC.Data.Serialized;
+using TaininIPC.Data.Frames;
 using TaininIPC.Protocol;
 using TaininIPC.Utils;
 

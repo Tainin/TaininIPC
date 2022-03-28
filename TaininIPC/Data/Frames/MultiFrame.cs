@@ -1,9 +1,8 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using TaininIPC.CritBitTree;
 using TaininIPC.CritBitTree.Keys;
-using TaininIPC.Utils;
 
-namespace TaininIPC.Data.Serialized;
+namespace TaininIPC.Data.Frames;
 
 /// <summary>
 /// Represents a mapped collection of <see cref="Frame"/> instances keyed by <see langword="short"/> ids.

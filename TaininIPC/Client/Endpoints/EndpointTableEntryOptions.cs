@@ -15,5 +15,5 @@ public delegate INetworkEndpoint NetworkEndpointFactory(ChunkHandler chunkHandle
 /// Represents a set of options for initializing <see cref="EndpointTableEntry"/> instances.
 /// </summary>
 /// <param name="NetworkFactory">The factory to use to constuct the network endpoint for the entry.</param>
-/// <param name="Router">The <see cref="IRouter"/> the entry should use to route received <see cref="Data.Serialized.MultiFrame"/> instances.</param>
+/// <param name="Router">The <see cref="IRouter"/> the entry should use to route received <see cref="Data.Frames.MultiFrame"/> instances.</param>
 public record EndpointTableEntryOptions(NetworkEndpointFactory NetworkFactory, IRouter Router);

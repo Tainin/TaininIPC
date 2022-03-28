@@ -1,7 +1,7 @@
 ﻿using TaininIPC.Client;
 using TaininIPC.CritBitTree.Keys;
+using TaininIPC.Data.Frames;
 using TaininIPC.Data.Protocol;
-using TaininIPC.Data.Serialized;
 
 namespace TaininIPC.Network;
 

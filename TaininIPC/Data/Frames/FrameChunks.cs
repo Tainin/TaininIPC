@@ -1,6 +1,6 @@
 ﻿using TaininIPC.Data.Protocol;
 
-namespace TaininIPC.Data.Serialized;
+namespace TaininIPC.Data.Frames;
 
 /// <summary>
 /// Static helper class providing properties and functions for getting <see cref="NetworkChunk"/> instances 

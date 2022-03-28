@@ -1,4 +1,4 @@
-﻿namespace TaininIPC.Data.Serialized;
+﻿namespace TaininIPC.Data.Frames;
 
 /// <summary>
 /// Represents a doubly linked list of buffers for data serialization, 

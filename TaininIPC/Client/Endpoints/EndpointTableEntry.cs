@@ -1,37 +1,31 @@
 ﻿using TaininIPC.Client.Interface;
 using TaininIPC.CritBitTree.Keys;
 using TaininIPC.Data.Frames;
-using TaininIPC.Data.Protocol;
-using TaininIPC.Network;
-using TaininIPC.Network.Interface;
+using TaininIPC.Network.Abstract;
 
 namespace TaininIPC.Client.Endpoints;
 
 /// <summary>
 /// Represents an entry in an <see cref="Endpoints.EndpointTable"/> or <see cref="NameMappedEndpointTable"/>.
 /// </summary>
-public sealed class EndpointTableEntry {
+public sealed class EndpointTableEntry : IRouter {
     
     /// <summary>
-    /// The <see cref="INetworkEndpoint"/> which handles sending and receiving <see cref="NetworkChunk"/> instances for the entry.
+    /// The endpoint used to send and receive <see cref="MultiFrame"/> instances through the entry.
     /// </summary>
-    public INetworkEndpoint NetworkEndpoint { get; private init; }
-    /// <summary>
-    /// The <see cref="Network.FrameEndpoint"/> which handles sending and receiveing <see cref="MultiFrame"/> instances for the entry.
-    /// </summary>
-    public FrameEndpoint FrameEndpoint { get; private init; }
+    public AbstractNetworkEndpoint NetworkEndpoint { get; }
     /// <summary>
     /// The entry's containing table.
     /// </summary>
-    public EndpointTable EndpointTable { get; private init; }
+    public EndpointTable EndpointTable { get; }
     /// <summary>
     /// The <see cref="IRouter"/> responsible for routing <see cref="MultiFrame"/> instances received through the entry.
     /// </summary>
-    public IRouter Router { get; private init; }
+    public IRouter Router { get; }
     /// <summary>
     /// The key mapped to the entry in <see cref="EndpointTable"/>.
     /// </summary>
-    public Int32Key Key { get; private init; }
+    public Int32Key Key { get; }
 
     /// <summary>
     /// Initializes an <see cref="EndpointTableEntry"/> from it's containing <paramref name="endpointTable"/>, it's
@@ -41,15 +35,13 @@ public sealed class EndpointTableEntry {
     /// <param name="endpointTable">The <see cref="Endpoints.EndpointTable"/> to which the entry belongs.</param>
     /// <param name="options">The options to use when initializing the entry.</param>
     public EndpointTableEntry(Int32Key key, EndpointTable endpointTable, EndpointTableEntryOptions options) {
-        NetworkEndpoint = options.NetworkFactory(HandleIncomingChunk);
-        FrameEndpoint = new(HandleOutgoingChunk, HandleIncomingFrame);
+        NetworkEndpoint = options.NetworkFactory(this);
+        Router = options.Router;
 
         EndpointTable = endpointTable;
-        Router = options.Router;
         Key = key;
     }
 
-    private Task HandleOutgoingChunk(NetworkChunk chunk) => NetworkEndpoint.SendChunk(chunk);
-    private Task HandleIncomingChunk(NetworkChunk chunk) => FrameEndpoint.ApplyChunk(chunk);
-    private Task HandleIncomingFrame(MultiFrame multiFrame) => Router.RouteFrame(multiFrame, this);
+    /// <inheritdoc cref="IRouter.RouteFrame(MultiFrame, EndpointTableEntry?)"/>
+    public Task RouteFrame(MultiFrame frame, EndpointTableEntry? _) => Router.RouteFrame(frame, this);
 }

@@ -61,7 +61,7 @@ public sealed class CallResponseHandler : IRouter {
         (ResponseHandle handle, int index, BasicKey responseKey) = await SetupResponseHandler().ConfigureAwait(false);
 
         ProtocolHelper.SetResponseKey(frame, responseKey);
-        await endpointTableEntry.FrameEndpoint.SendMultiFrame(frame).ConfigureAwait(false);
+        await endpointTableEntry.NetworkEndpoint.SendMultiFrame(frame).ConfigureAwait(false);
         MultiFrame response = await handle.WhenResponse().ConfigureAwait(false);
 
         await TearDownResponseHandler(handle, index, responseKey).ConfigureAwait(false);

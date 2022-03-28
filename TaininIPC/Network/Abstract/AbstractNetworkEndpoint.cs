@@ -76,4 +76,11 @@ public abstract class AbstractNetworkEndpoint {
         if (frameDeserializer.ApplyChunk(chunk, out MultiFrame? frame))
             await incomingFrameRouter.RouteFrame(frame, null).ConfigureAwait(false);
     }
+
+    /// <summary>
+    /// Raises the <see cref="EndpointStatusChanged"/> event.
+    /// </summary>
+    /// <param name="sender">The source of the event.</param>
+    /// <param name="e">The arguments object for the event.</param>
+    protected void OnEndpointStatusChanged(object? sender, EndpointStatusChangedEventArgs e) => EndpointStatusChanged?.Invoke(sender, e);
 } 

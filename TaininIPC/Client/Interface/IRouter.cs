@@ -8,7 +8,7 @@ namespace TaininIPC.Client.Interface;
 /// </summary>
 public interface IRouter {
     /// <summary>
-    /// Route the given <paramref name="frame"/>.
+    /// Routes the given <paramref name="frame"/>.
     /// </summary>
     /// <param name="frame">The <see cref="MultiFrame"/> to route.</param>
     /// <param name="origin">The endpoint which the <paramref name="frame"/> arived through or <see langword="null"/> if it originated locally.</param>

@@ -1,15 +1,15 @@
 ﻿using System.Buffers.Binary;
 using System.Net.Sockets;
+using TaininIPC.Client.Interface;
 using TaininIPC.Data.Protocol;
-using TaininIPC.Network.Interface;
+using TaininIPC.Network.Abstract;
 
 namespace TaininIPC.Network.Sockets;
 
 /// <summary>
 /// Provides an endpoint for a network connection through a socket.
 /// </summary>
-public sealed class SocketNetworkEndpoint : INetworkEndpoint {
-
+public sealed class SocketNetworkEndpoint : AbstractNetworkEndpoint {
     #region Transport instruction
     private static readonly int INSTRUCTION_BUFFER_LENGTH = 2;
 
@@ -26,14 +26,8 @@ public sealed class SocketNetworkEndpoint : INetworkEndpoint {
     private static readonly byte DISCONNECT_FLAG = (1 << 2);
     #endregion
 
-    /// <summary>
-    /// Occurs when the status of the endpoint changes.
-    /// </summary>
-    public event EventHandler<EndpointStatusChangedEventArgs>? EndpointStatusChanged;
-
     private readonly Socket connection;
     private readonly TimeoutOptions timeoutOptions;
-    private readonly ChunkHandler incomingChunkHandler;
 
     private readonly CancellationTokenSource cancellationTokenSource;
     private readonly SemaphoreSlim keepAliveBeginSemaphore;
@@ -43,42 +37,35 @@ public sealed class SocketNetworkEndpoint : INetworkEndpoint {
     private int status;
     private long keepAliveExpiresAt;
 
-    /// <summary>
-    /// The current status of the endpoint.
-    /// </summary>
-    public EndpointStatus Status => (EndpointStatus)Interlocked.CompareExchange(ref status, 0, 0);
+    /// <inheritdoc cref="AbstractNetworkEndpoint.Status"/>
+    public override EndpointStatus Status => (EndpointStatus)Interlocked.CompareExchange(ref status, 0, 0);
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="SocketNetworkEndpoint"/> class from the given socket.
+    /// Initializes a new <see cref="SocketNetworkEndpoint"/> with the specified <paramref name="socket"/>,
+    /// <paramref name="incomingFrameRouter"/>, and <paramref name="timeoutOptions"/>.
     /// </summary>
-    /// <param name="socket">Socket to use as the underlying network connection.</param>
-    /// <param name="incomingChunkHandler">Handler function to be called on for each received <see cref="NetworkChunk"/></param>
+    /// <param name="socket">The socket to base the network connection on.</param>
+    /// <param name="incomingFrameRouter">The router to use when routing incoming frames.</param>
     /// <param name="timeoutOptions">Options for configuring keep alive timings.</param>
-    public SocketNetworkEndpoint(Socket socket, ChunkHandler incomingChunkHandler, TimeoutOptions timeoutOptions) {
-        connection = socket;
+    public SocketNetworkEndpoint(Socket socket, IRouter incomingFrameRouter, TimeoutOptions timeoutOptions) : base(incomingFrameRouter) {
         this.timeoutOptions = timeoutOptions;
-        this.incomingChunkHandler = incomingChunkHandler;
+        connection = socket;
 
-        cancellationTokenSource = new CancellationTokenSource();
-
-        // initialize semaphores such that they block on the first call to Wait pending the first call to Release
+        cancellationTokenSource = new();
         keepAliveBeginSemaphore = new(0, 1);
         disconnectSemaphore = new(0, 1);
 
-        // initialize semaphore to not block the first call to Wait but block all subsequent calls pending the corrisponding Release calls
         sendSemaphore = new(1, 1);
 
-        // ensure that initial status is Unstarted even though it should be by default
-        UpdateStatus(EndpointStatus.Unstarted, Status);
+        Interlocked.Exchange(ref status, (int)EndpointStatus.Unstarted);
     }
-
     /// <summary>
     /// Run the four lifetime services (KeepAlive, Receive, Timeout, and Disconnect) required by a running <see cref="SocketNetworkEndpoint"/>.
     /// </summary>
     /// <returns>An asyncronous task that completes once the underlying services are stopped or fault.</returns>
     /// <exception cref="InvalidOperationException">If the <see cref="SocketNetworkEndpoint"/> is already in a state other than 
     /// <see cref="EndpointStatus.Unstarted"/></exception>
-    public async Task Run() {
+    public override async Task Run() {
         // Check that the endpoint is in the Unstarted state and if so transition it to Starting
         // Otherwise throw an exception
         if (!UpdateStatus(EndpointStatus.Starting, EndpointStatus.Unstarted))
@@ -126,28 +113,21 @@ public sealed class SocketNetworkEndpoint : INetworkEndpoint {
         // Throw any exceptions which may have occured
         if (exception is not null) throw exception;
     }
-    /// <summary>
-    /// Stop the lifetime services of the endpoint.
-    /// </summary>
-    public void Stop() {
+    /// <inheritdoc cref="AbstractNetworkEndpoint.Stop"/>
+    public override void Stop() {
         // Transition the endpoint to the Stopped status if is not already Stopped or Faulted.
         UpdateStatus(EndpointStatus.Stopped, EndpointStatus.Running);
         cancellationTokenSource.Cancel();
     }
-    /// <summary>
-    /// Send the given <paramref name="chunk"/> across the network.
-    /// </summary>
-    /// <param name="chunk">The <see cref="NetworkChunk"/> to send.</param>
-    /// <returns>An asyncronouse task representing the operation.</returns>
+    /// <inheritdoc cref="AbstractNetworkEndpoint.SendChunk(NetworkChunk)"/>
     /// <exception cref="InvalidOperationException">If the endpoint is not currently running.</exception>
-    public async Task SendChunk(NetworkChunk chunk) {
+    protected override async Task SendChunk(NetworkChunk chunk) {
         // Ensure that the endpoint is running
         if (Status is not EndpointStatus.Running) throw new InvalidOperationException("Cannot send throug an endpoint which isn't running.");
         // Call internal send routine and flag the operation as externally called
         await SendChunkInternal(chunk, external: true).ConfigureAwait(false);
     }
 
-    
     /// <summary>
     /// Lifetime service which periodically sends a keep alive chunk to the remote.
     /// </summary>
@@ -174,7 +154,7 @@ public sealed class SocketNetworkEndpoint : INetworkEndpoint {
             (NetworkChunk chunk, bool isExternal) = await ReceiveChunk().ConfigureAwait(false);
 
             // Determine if chunk is meant to be handled by the endpoint or by the handler provided external chunks
-            if (isExternal) await incomingChunkHandler(chunk).ConfigureAwait(false);
+            if (isExternal) await ApplyChunk(chunk).ConfigureAwait(false);
             else HandleInternalChunk(chunk);
         }
     }
@@ -255,7 +235,7 @@ public sealed class SocketNetworkEndpoint : INetworkEndpoint {
             // Release TimeoutService waiting for initial keep alive chunk if necessary
             if ((chunk.Instruction & INITIAL_FLAG) != 0) keepAliveBeginSemaphore.Release();
 
-        // Handle disconnect chunk
+            // Handle disconnect chunk
         } else if (chunk.Instruction == DISCONNECT_FLAG) Stop();
     }
     /// <summary>
@@ -308,7 +288,7 @@ public sealed class SocketNetworkEndpoint : INetworkEndpoint {
         // Receive instructions
         byte[] instructionsBuffer = new byte[INSTRUCTION_BUFFER_LENGTH];
         await connection.ReceiveBuffer(instructionsBuffer, cancellationTokenSource.Token).ConfigureAwait(false);
-        
+
         // Unpack instructions
         byte lowLevelInstruction = instructionsBuffer[0];
         byte highLevelInstruction = instructionsBuffer[1];
@@ -332,7 +312,7 @@ public sealed class SocketNetworkEndpoint : INetworkEndpoint {
             data = new byte[dataLength];
             await connection.ReceiveBuffer(data, cancellationTokenSource.Token).ConfigureAwait(false);
         }
-        
+
         return (new(highLevelInstruction, data), isExternal);
     }
     /// <summary>
@@ -350,8 +330,7 @@ public sealed class SocketNetworkEndpoint : INetworkEndpoint {
         if (oldStatus != comparand) return false;
 
         // If the old status is different from the new status raise the EndpointStatusChanged event
-        if (oldStatus != newStatus) 
-            EndpointStatusChanged?.Invoke(this, new(oldStatus, newStatus));
+        if (oldStatus != newStatus) OnEndpointStatusChanged(this, new(oldStatus, newStatus));
 
         // Return true as the status was changed
         return true;

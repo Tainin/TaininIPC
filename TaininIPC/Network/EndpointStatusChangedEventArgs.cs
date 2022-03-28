@@ -1,17 +1,17 @@
-﻿using TaininIPC.Network.Interface;
+﻿using TaininIPC.Network.Abstract;
 
 namespace TaininIPC.Network;
 
 /// <summary>
-/// Provides data for the <see cref="INetworkEndpoint.EndpointStatusChanged"/> event.
+/// Provides data for the <see cref="AbstractNetworkEndpoint.EndpointStatusChanged"/> event.
 /// </summary>
 public sealed class EndpointStatusChangedEventArgs : EventArgs {
     /// <summary>
-    /// Gets the status that the <see cref="INetworkEndpoint"/> was in prior to the change which triggered the event.
+    /// Gets the status that the endpoint was in prior to the change which triggered the event.
     /// </summary>
     public EndpointStatus OldStatus { get; }
     /// <summary>
-    /// Gets the status that the <see cref="INetworkEndpoint"/> is in after the event which triggered the event.
+    /// Gets the status that the endpoint is in after the event which triggered the event.
     /// </summary>
     public EndpointStatus NewStatus { get; }
 

@@ -1,16 +1,17 @@
 ﻿using TaininIPC.Client.Interface;
-using TaininIPC.Network;
-using TaininIPC.Network.Interface;
+using TaininIPC.Data.Frames;
+using TaininIPC.Network.Abstract;
 
 namespace TaininIPC.Client.Endpoints;
+
 /// <summary>
-/// Represents a function which constructs an <see cref="INetworkEndpoint"/> from a <see cref="ChunkHandler"/> 
-/// which processes recieved <see cref="Data.Protocol.NetworkChunk"/> instances.
+/// Represents a function which constructs an <see cref="AbstractNetworkEndpoint"/> from an <see cref="IRouter"/> 
+/// which routes received <see cref="MultiFrame"/> instances.
 /// </summary>
-/// <param name="chunkHandler">The handler the <see cref="INetworkEndpoint"/> should use for recieved <see cref="Data.Protocol.NetworkChunk"/>
-/// instances.</param>
-/// <returns>The constructed <see cref="INetworkEndpoint"/>.</returns>
-public delegate INetworkEndpoint NetworkEndpointFactory(ChunkHandler chunkHandler);
+/// <param name="router">The router the endpoint should use to route it's frames.</param>
+/// <returns>The constructed <see cref="AbstractNetworkEndpoint"/>.</returns>
+public delegate AbstractNetworkEndpoint NetworkEndpointFactory(IRouter router);
+
 /// <summary>
 /// Represents a set of options for initializing <see cref="EndpointTableEntry"/> instances.
 /// </summary>

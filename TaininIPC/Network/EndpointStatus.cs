@@ -1,9 +1,7 @@
-﻿using TaininIPC.Network.Interface;
-
-namespace TaininIPC.Network;
+﻿namespace TaininIPC.Network;
 
 /// <summary>
-/// Specifies the status of an <see cref="INetworkEndpoint"/>
+/// Specifies the status of a network endpoint.
 /// </summary>
 public enum EndpointStatus : int {
     /// <summary>

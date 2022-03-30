@@ -6,7 +6,7 @@ using TaininIPC.Network.Abstract;
 namespace TaininIPC.Client.Endpoints;
 
 /// <summary>
-/// Represents an entry in an <see cref="Endpoints.EndpointTable"/> or <see cref="NameMappedEndpointTable"/>.
+/// Represents an entry in an <see cref="EndpointTable"/>.
 /// </summary>
 public sealed class EndpointTableEntry : IRouter {
     
@@ -14,10 +14,6 @@ public sealed class EndpointTableEntry : IRouter {
     /// The endpoint used to send and receive <see cref="MultiFrame"/> instances through the entry.
     /// </summary>
     public AbstractNetworkEndpoint NetworkEndpoint { get; }
-    /// <summary>
-    /// The entry's containing table.
-    /// </summary>
-    public EndpointTable EndpointTable { get; }
     /// <summary>
     /// The <see cref="IRouter"/> responsible for routing <see cref="MultiFrame"/> instances received through the entry.
     /// </summary>
@@ -28,20 +24,19 @@ public sealed class EndpointTableEntry : IRouter {
     public Int32Key Key { get; }
 
     /// <summary>
-    /// Initializes an <see cref="EndpointTableEntry"/> from it's containing <paramref name="endpointTable"/>, it's
-    /// <paramref name="key"/> in that table, and an <paramref name="options"/> object.
+    /// Initializes an <see cref="EndpointTableEntry"/> from it's <paramref name="key"/> and an <paramref name="options"/> object.
     /// </summary>
-    /// <param name="key">The key which will map to the entry in it's <paramref name="endpointTable"/>.</param>
-    /// <param name="endpointTable">The <see cref="Endpoints.EndpointTable"/> to which the entry belongs.</param>
+    /// <param name="key">The key which maps to the entry in it's table.</param>
     /// <param name="options">The options to use when initializing the entry.</param>
-    public EndpointTableEntry(Int32Key key, EndpointTable endpointTable, EndpointTableEntryOptions options) {
+    public EndpointTableEntry(Int32Key key, EndpointTableEntryOptions options) {
         NetworkEndpoint = options.NetworkFactory(this);
         Router = options.Router;
-
-        EndpointTable = endpointTable;
         Key = key;
     }
 
+    //TODO: Implement breadcrumb return route path tracing here
+    //      Check protocol helper RETURN_PATH_KEY
+    //      Should probably write custom xml-doc
     /// <inheritdoc cref="IRouter.RouteFrame(MultiFrame, EndpointTableEntry?)"/>
     public Task RouteFrame(MultiFrame frame, EndpointTableEntry? _) => Router.RouteFrame(frame, this);
 }

@@ -1,12 +1,16 @@
-﻿using TaininIPC.Client.Abstract;
+﻿using TaininIPC.Client.Interface;
+using TaininIPC.Client.Table;
 using TaininIPC.CritBitTree.Keys;
+using TaininIPC.Data.Frames;
+using TaininIPC.Protocol;
+using TaininIPC.Utils;
 
 namespace TaininIPC.Client.Endpoints;
 
 /// <summary>
 /// Represents a table of <see cref="Int32Key"/> keys mapped to <see cref="EndpointTableEntry"/> entries.
 /// </summary>
-public sealed class EndpointTable : AbstractTable<EndpointTableEntryOptions, EndpointTableEntry> {
+public sealed class EndpointTable : Table<EndpointTableEntry>, IRouter {
     /// <summary>
     /// Initializes a new <see cref="EndpointTable"/> with the specified number of reserved ids.
     /// </summary>
@@ -14,11 +18,16 @@ public sealed class EndpointTable : AbstractTable<EndpointTableEntryOptions, End
     public EndpointTable(int reservedCount) : base(reservedCount) { }
 
     /// <summary>
-    /// Initializes a new <see cref="EndpointTableEntry"/> from the given <paramref name="options"/> and adds it to the table.
+    /// Routes the specified <paramref name="frame"/> by sending it through the endpoint specified by it's next routing key.
     /// </summary>
-    /// <param name="key">The keyt to map to the added <see cref="EndpointTableEntry"/>.</param>
-    /// <param name="options">The options for constructing the new <see cref="EndpointTableEntry"/>.</param>
+    /// <param name="frame">The frame to route.</param>
+    /// <param name="_"></param>
     /// <returns>An asyncronous task representing the operation.</returns>
-    protected override async Task AddInternal(Int32Key key, EndpointTableEntryOptions options) =>
-        await AddInternalBase(key, new(key, this, options)).ConfigureAwait(false);
+    public async Task RouteFrame(MultiFrame frame, EndpointTableEntry? _) {
+        if (!ProtocolHelper.TryGetRoutingKey(frame, out Int32Key? routingKey)) return;
+
+        Attempt<EndpointTableEntry> attempt = await TryGet(routingKey).ConfigureAwait(false);
+        if (attempt.TryResult(out EndpointTableEntry? entry))
+            await entry.NetworkEndpoint.SendMultiFrame(frame).ConfigureAwait(false);
+    }
 }

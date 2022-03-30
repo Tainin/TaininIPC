@@ -8,6 +8,11 @@ namespace TaininIPC.CritBitTree.Keys;
 /// </summary>
 public sealed class StringKey : AbstractCritBitKey<string> {
     /// <summary>
+    /// Represents a <see cref="StringKey"/> backed by <see cref="string.Empty"/>.
+    /// </summary>
+    public static StringKey Empty { get; } = new(string.Empty);
+
+    /// <summary>
     /// Initializes an <see cref="StringKey"/> from it's <see langword="string"/> representation.
     /// </summary>
     /// <param name="id">The id to initialize the key from.</param>

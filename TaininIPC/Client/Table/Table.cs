@@ -105,6 +105,8 @@ public class Table<T> where T : notnull {
     public async Task<bool> TryRemove(Int32Key key) {
         await syncSemaphore.WaitAsync().ConfigureAwait(false);
         bool removed = table.TryRemove(key);
+        if (removed && key.Id < reservations.Length) // Release reservation claim if necessary
+            Interlocked.Exchange(ref reservations[key.Id], 0);
         syncSemaphore.Release();
         return removed;
     }

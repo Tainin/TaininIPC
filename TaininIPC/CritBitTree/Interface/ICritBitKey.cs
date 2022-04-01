@@ -17,10 +17,10 @@ public interface ICritBitKey {
 /// <summary>
 /// Represents the key of a <see cref="CritBitTree{TKey, TValue}"/> which can be converted to and from an id of another type.
 /// </summary>
-/// <typeparam name="T">The type of the id</typeparam>
-public interface ICritBitKey<T> : ICritBitKey {
+/// <typeparam name="TId">The type of the id</typeparam>
+public interface ICritBitKey<TId> : ICritBitKey {
     /// <summary>
     /// The id which can be converted to and from <see cref="ICritBitKey.Memory"/>
     /// </summary>
-    public T Id { get; }
+    public TId Id { get; }
 }

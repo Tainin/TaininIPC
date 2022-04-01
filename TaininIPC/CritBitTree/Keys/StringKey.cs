@@ -20,8 +20,8 @@ public sealed class StringKey : AbstractCritBitKey<string> {
     /// <summary>
     /// Initializes an <see cref="StringKey"/> from it's memory representation.
     /// </summary>
-    /// <param name="key">The memory to initialize the key from.</param>
-    public StringKey(ReadOnlyMemory<byte> key) : base(key) { }
+    /// <param name="memory">The memory to initialize the key from.</param>
+    public StringKey(ReadOnlyMemory<byte> memory) : base(memory) { }
 
     /// <inheritdoc cref="AbstractCritBitKey{T}.CalculateId"/>
     protected override string CalculateId() => Encoding.BigEndianUnicode.GetString(Memory.Span);

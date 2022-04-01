@@ -12,6 +12,6 @@ public sealed class BasicKey : ICritBitKey {
     /// <summary>
     /// Initializes a <see cref="BasicKey"/> from a region of memory.
     /// </summary>
-    /// <param name="key"></param>
-    public BasicKey(ReadOnlyMemory<byte> key) => Memory = key;
+    /// <param name="memory"></param>
+    public BasicKey(ReadOnlyMemory<byte> memory) => Memory = memory;
 }

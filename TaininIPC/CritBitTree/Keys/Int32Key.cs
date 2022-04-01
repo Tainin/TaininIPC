@@ -15,15 +15,15 @@ public sealed class Int32Key : AbstractCritBitKey<int> {
     /// <summary>
     /// Initializes an <see cref="Int32Key"/> from it's memory representation.
     /// </summary>
-    /// <param name="key">The memory to initialize the key from.</param>
-    public Int32Key(ReadOnlyMemory<byte> key) : base(key[..sizeof(int)]) { }
+    /// <param name="memory">The memory to initialize the key from.</param>
+    public Int32Key(ReadOnlyMemory<byte> memory) : base(memory[..sizeof(int)]) { }
 
     /// <inheritdoc cref="AbstractCritBitKey{T}.CalculateId"/>
     protected override int CalculateId() => BinaryPrimitives.ReadInt16BigEndian(Memory.Span);
     /// <inheritdoc cref="AbstractCritBitKey{T}.CalculateMemory"/>
     protected override ReadOnlyMemory<byte> CalculateMemory() {
-        byte[] keyBuffer = new byte[sizeof(int)];
-        BinaryPrimitives.WriteInt32BigEndian(keyBuffer, Id);
-        return keyBuffer;
+        byte[] buffer = new byte[sizeof(int)];
+        BinaryPrimitives.WriteInt32BigEndian(buffer, Id);
+        return buffer;
     }
 }

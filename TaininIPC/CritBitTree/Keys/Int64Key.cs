@@ -15,15 +15,15 @@ public sealed class Int64Key : AbstractCritBitKey<long> {
     /// <summary>
     /// Initializes an <see cref="Int64Key"/> from it's memory representation.
     /// </summary>
-    /// <param name="key">The memory to initialize the key from.</param>
-    public Int64Key(ReadOnlyMemory<byte> key) : base(key[..sizeof(long)]) { }
+    /// <param name="memory">The memory to initialize the key from.</param>
+    public Int64Key(ReadOnlyMemory<byte> memory) : base(memory[..sizeof(long)]) { }
 
     /// <inheritdoc cref="AbstractCritBitKey{T}.CalculateId"/>
     protected override long CalculateId() => BinaryPrimitives.ReadInt16BigEndian(Memory.Span);
     /// <inheritdoc cref="AbstractCritBitKey{T}.CalculateMemory"/>
     protected override ReadOnlyMemory<byte> CalculateMemory() {
-        byte[] keyBuffer = new byte[sizeof(long)];
-        BinaryPrimitives.WriteInt64BigEndian(keyBuffer, Id);
-        return keyBuffer;
+        byte[] buffer = new byte[sizeof(long)];
+        BinaryPrimitives.WriteInt64BigEndian(buffer, Id);
+        return buffer;
     }
 }

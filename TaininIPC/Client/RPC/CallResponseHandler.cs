@@ -41,8 +41,8 @@ public sealed class CallResponseHandler : IRouter {
     public async Task RouteFrame(MultiFrame frame, EndpointTableEntry? _) {
         await syncSemaphore.WaitAsync().ConfigureAwait(false);
         try {
-            if (!ProtocolHelper.TryGetResponseKey(frame, out BasicKey? responseKey)) return;
-            if (!responseHandlers.TryGet(responseKey, out ResponseHandle? responseHandle)) return;
+            if (!frame.TryGetResponseIdentifier(out BasicKey? responseIdentifier)) return;
+            if (!responseHandlers.TryGet(responseIdentifier, out ResponseHandle? responseHandle)) return;
 
             responseHandle!.Release(frame);
         } finally {
@@ -58,18 +58,18 @@ public sealed class CallResponseHandler : IRouter {
     /// <param name="frame">The frame to send as the call data.</param>
     /// <returns>An asyncronous task which completes with a <see cref="MultiFrame"/> represening the results of the call.</returns>
     public async Task<MultiFrame> Call(EndpointTableEntry endpointTableEntry, MultiFrame frame) {
-        (ResponseHandle handle, int index, BasicKey responseKey) = await SetupResponseHandler().ConfigureAwait(false);
+        (ResponseHandle handle, int index, BasicKey responseIdentifier) = await SetupResponseHandler().ConfigureAwait(false);
 
-        ProtocolHelper.SetResponseKey(frame, responseKey);
+        frame.SetResponseIdentifier(responseIdentifier);
         await endpointTableEntry.NetworkEndpoint.SendMultiFrame(frame).ConfigureAwait(false);
         MultiFrame response = await handle.WhenResponse().ConfigureAwait(false);
 
-        await TearDownResponseHandler(handle, index, responseKey).ConfigureAwait(false);
+        await TearDownResponseHandler(handle, index, responseIdentifier).ConfigureAwait(false);
 
         return response;
     }
 
-    private async Task<(ResponseHandle handle, int index, BasicKey responseKey)> SetupResponseHandler() {
+    private async Task<(ResponseHandle handle, int index, BasicKey responseIdentifier)> SetupResponseHandler() {
         await syncSemaphore.WaitAsync().ConfigureAwait(false);
         if (!handleRecycling.TryDequeue(out ResponseHandle? handle) || handle is null) handle = new();
         if (!indexRecycling.TryDequeue(out int index)) index = Interlocked.Increment(ref nextFreshIndex);
@@ -77,16 +77,16 @@ public sealed class CallResponseHandler : IRouter {
         byte[] keyBuffer = new byte[2 * sizeof(byte)];
         BinaryPrimitives.WriteInt32BigEndian(keyBuffer.AsSpan(0 * sizeof(int)), index);
         BinaryPrimitives.WriteInt32BigEndian(keyBuffer.AsSpan(1 * sizeof(int)), Environment.TickCount);
-        BasicKey responseKey = new(keyBuffer);
+        BasicKey responseIdentifier = new(keyBuffer);
 
-        bool added = responseHandlers.TryAdd(responseKey, handle);
+        bool added = responseHandlers.TryAdd(responseIdentifier, handle);
 
         syncSemaphore.Release();
 
         Debug.Assert(added, $"{nameof(CallResponseHandler)}.{nameof(Call)} should never fail " +
             $"to add {nameof(handle)} to {nameof(responseHandlers)}");
         
-        return (handle, index, responseKey);
+        return (handle, index, responseIdentifier);
     }
     private async Task TearDownResponseHandler(ResponseHandle handle, int index, BasicKey responseKey) {
         await syncSemaphore.WaitAsync().ConfigureAwait(false);

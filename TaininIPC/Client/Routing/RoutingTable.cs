@@ -20,7 +20,7 @@ public sealed class RoutingTable : Table<IRouter>, IRouter {
 
     /// <inheritdoc cref="IRouter.RouteFrame(MultiFrame, EndpointTableEntry)"/>
     public async Task RouteFrame(MultiFrame frame, EndpointTableEntry? origin) {
-        if (!ProtocolHelper.TryGetRoutingKey(frame, out Int32Key? routingKey)) return;
+        if (!frame.TryGetNextRoutingKey(out Int32Key? routingKey)) return;
 
         Attempt<IRouter> routerAttempt = await TryGet(routingKey).ConfigureAwait(false);
         if (routerAttempt.TryResult(out IRouter? router))

@@ -24,7 +24,8 @@ public sealed class EndpointTable : Table<EndpointTableEntry>, IRouter {
     /// <param name="_"></param>
     /// <returns>An asyncronous task representing the operation.</returns>
     public async Task RouteFrame(MultiFrame frame, EndpointTableEntry? _) {
-        if (!ProtocolHelper.TryGetRoutingKey(frame, out Int32Key? routingKey)) return;
+
+        if (!frame.TryGetNextRoutingKey(out Int32Key? routingKey)) return;
 
         Attempt<EndpointTableEntry> attempt = await TryGet(routingKey).ConfigureAwait(false);
         if (attempt.TryResult(out EndpointTableEntry? entry))

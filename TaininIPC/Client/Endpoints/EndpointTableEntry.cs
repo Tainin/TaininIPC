@@ -2,6 +2,7 @@
 using TaininIPC.CritBitTree.Keys;
 using TaininIPC.Data.Frames;
 using TaininIPC.Network.Abstract;
+using TaininIPC.Protocol;
 
 namespace TaininIPC.Client.Endpoints;
 
@@ -34,9 +35,16 @@ public sealed class EndpointTableEntry : IRouter {
         Key = key;
     }
 
-    //TODO: Implement breadcrumb return route path tracing here
-    //      Check protocol helper RETURN_PATH_KEY
-    //      Should probably write custom xml-doc
-    /// <inheritdoc cref="IRouter.RouteFrame(MultiFrame, EndpointTableEntry?)"/>
-    public Task RouteFrame(MultiFrame frame, EndpointTableEntry? _) => Router.RouteFrame(frame, this);
+    /// <summary>
+    /// Routes the specified <paramref name="frame"/> to the entry's <see cref="Router"/> with the entry as it's origin.
+    /// If the <paramref name="frame"/> contains a return routing path, prepends the entry's <see cref="Key"/> to it.
+    /// </summary>
+    /// <param name="frame">The frame to route.</param>
+    /// <param name="_"></param>
+    /// <returns>An asyncronous task representing the operation.</returns>
+    public Task RouteFrame(MultiFrame frame, EndpointTableEntry? _) {
+        if (frame.TryGet(ProtocolMultiFrameKeys.RETURN_ROUTING_PATH_KEY, out Frame? returnPath))
+           returnPath.Insert(Key.Memory, 0);
+        return Router.RouteFrame(frame, this);
+    }
 }

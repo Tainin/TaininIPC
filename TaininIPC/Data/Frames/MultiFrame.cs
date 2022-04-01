@@ -1,4 +1,5 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using TaininIPC.CritBitTree;
 using TaininIPC.CritBitTree.Keys;
 
@@ -32,18 +33,36 @@ public sealed class MultiFrame {
     /// to the <see cref="MultiFrame"/>, false if the <paramref name="key"/> already exists.</returns>
     public bool TryCreate(Int16Key key, out Frame frame) => subFrames.TryAdd(key, frame = new());
     /// <summary>
+    /// Sets the <see cref="Frame"/> mapped to by the given <paramref name="key"/>. If the <paramref name="key"/> already maps
+    /// to a frame it is replaced.
+    /// </summary>
+    /// <param name="key">The key which maps to the frame to set.</param>
+    /// <param name="frame">The frame to set.</param>
+    public void Set(Int16Key key, Frame frame) {
+        if (subFrames.TryAdd(key, frame)) return;
+        bool updated = subFrames.TryUpdate(key, frame);
+        Debug.Assert(updated);
+    }
+    /// <summary>
     /// Attempts to get the <see cref="Frame"/> mapped to by the given <paramref name="key"/>.
     /// </summary>
     /// <param name="key">The key of the <see cref="Frame"/> to get.</param>
     /// <param name="frame">Contains the <see cref="Frame"/> mapped to by the <paramref name="key"/> on return if it exists.</param>
     /// <returns><see langword="true"/> if the <paramref name="key"/> exists, <see langword="false"/> otherwise.</returns>
-    public bool TryGet(Int16Key key, [NotNullWhen(true)]out Frame? frame) => subFrames.TryGet(key, out frame);
+    public bool TryGet(Int16Key key, [NotNullWhen(true)] out Frame? frame) => subFrames.TryGet(key, out frame);
     /// <summary>
     /// Checks if the given <paramref name="key"/> exists in the <see cref="MultiFrame"/>.
     /// </summary>
     /// <param name="key">The key to check for.</param>
     /// <returns><see langword="true"/> if the <paramref name="key"/> exists, <see langword="false"/> otherwise.</returns>
     public bool ContainsKey(Int16Key key) => subFrames.ContainsKey(key);
+    /// <summary>
+    /// Attempts to pop (get and remove) the <see cref="Frame"/> mapped to by the given <paramref name="key"/>.
+    /// </summary>
+    /// <param name="key">The key of the <see cref="Frame"/> to pop.</param>
+    /// <param name="frame">Contains the <see cref="Frame"/> mapped to by the given <paramref name="key"/> on return if it exists.</param>
+    /// <returns><see langword="true"/> if the <paramref name="key"/> exists, <see langword="false"/> otherwise.</returns>
+    public bool TryPop(Int16Key key, [NotNullWhen(true)] out Frame? frame) => subFrames.TryPop(key, out frame);
     /// <summary>
     /// Attempts to remove the <see cref="Frame"/> mapped to by the given <paramref name="key"/> from the <see cref="MultiFrame"/>.
     /// </summary>
@@ -55,4 +74,24 @@ public sealed class MultiFrame {
     /// Removes all <see cref="Frame"/> instances from the <see cref="MultiFrame"/>.
     /// </summary>
     public void Clear() => subFrames.Clear();
+}
+/// <summary>
+/// Provides extension methods for <see cref="MultiFrame"/>.
+/// </summary>
+public static class MultiFrameExtensions {
+    /// <summary>
+    /// Attempts to pop the <see cref="Frame"/> mapped to by <paramref name="from"/> and map <paramref name="to"/> to it.
+    /// </summary>
+    /// <param name="multiFrame">The multiframe to operate on.</param>
+    /// <param name="from">The key of the <see cref="Frame"/> to pop.</param>
+    /// <param name="to">The key to map to the popped <see cref="Frame"/>.</param>
+    /// <returns></returns>
+    /// <remarks>
+    /// This removes <paramref name="from"/> from the <see cref="MultiFrame"/> and replaces the <see cref="Frame"/> mapped to by <paramref name="to"/>.
+    /// </remarks>
+    public static bool TrySwapOver(this MultiFrame multiFrame, Int16Key from, Int16Key to) {
+        if (!multiFrame.TryPop(from, out Frame? frame)) return false;
+        multiFrame.Set(to, frame);
+        return true;
+    }
 }

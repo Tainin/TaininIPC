@@ -77,7 +77,7 @@ public sealed class NameMap {
     }
 
     /// <summary>
-    /// Attempts to get the <see cref="Pair"/> associated with the given <paramref name="name"/>.
+    /// Attempts to get the <see cref="Pair"/> associated with the given <paramref name="key"/>.
     /// </summary>
     /// <param name="key">The key to get the pair associated with..</param>
     /// <returns>An asyncronous task which completes with an <see cref="Attempt{T}"/> representing the associated pair if the

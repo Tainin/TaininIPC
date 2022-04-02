@@ -19,7 +19,7 @@ public sealed class Int64Key : AbstractCritBitKey<long> {
     public Int64Key(ReadOnlyMemory<byte> memory) : base(memory[..sizeof(long)]) { }
 
     /// <inheritdoc cref="AbstractCritBitKey{T}.CalculateId"/>
-    protected override long CalculateId() => BinaryPrimitives.ReadInt16BigEndian(Memory.Span);
+    protected override long CalculateId() => BinaryPrimitives.ReadInt64BigEndian(Memory.Span);
     /// <inheritdoc cref="AbstractCritBitKey{T}.CalculateMemory"/>
     protected override ReadOnlyMemory<byte> CalculateMemory() {
         byte[] buffer = new byte[sizeof(long)];

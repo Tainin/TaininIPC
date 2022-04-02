@@ -1,5 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
-using TaininIPC.Data.Protocol;
+using TaininIPC.Data.Network;
 using TaininIPC.Utils;
 
 namespace TaininIPC.Data.Frames.Serialization;

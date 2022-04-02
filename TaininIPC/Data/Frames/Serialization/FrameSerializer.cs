@@ -1,5 +1,5 @@
 ﻿using TaininIPC.CritBitTree.Keys;
-using TaininIPC.Data.Protocol;
+using TaininIPC.Data.Network;
 
 namespace TaininIPC.Data.Frames.Serialization;
 

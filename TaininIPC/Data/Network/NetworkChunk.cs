@@ -1,4 +1,4 @@
-﻿namespace TaininIPC.Data.Protocol;
+﻿namespace TaininIPC.Data.Network;
 
 /// <summary>
 /// Represents a single packet for transfer over the network.

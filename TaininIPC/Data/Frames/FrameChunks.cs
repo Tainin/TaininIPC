@@ -1,4 +1,4 @@
-﻿using TaininIPC.Data.Protocol;
+﻿using TaininIPC.Data.Network;
 
 namespace TaininIPC.Data.Frames;
 

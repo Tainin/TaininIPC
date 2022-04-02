@@ -1,7 +1,7 @@
 ﻿using System.Buffers.Binary;
 using System.Net.Sockets;
 using TaininIPC.Client.Routing.Interface;
-using TaininIPC.Data.Protocol;
+using TaininIPC.Data.Network;
 using TaininIPC.Network.Abstract;
 
 namespace TaininIPC.Network.Sockets;

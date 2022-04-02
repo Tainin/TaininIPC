@@ -1,7 +1,7 @@
 ﻿using TaininIPC.Client.Routing.Interface;
 using TaininIPC.Data.Frames;
 using TaininIPC.Data.Frames.Serialization;
-using TaininIPC.Data.Protocol;
+using TaininIPC.Data.Network;
 
 namespace TaininIPC.Network.Abstract;
 

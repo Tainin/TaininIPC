@@ -1,6 +1,6 @@
 ﻿using TaininIPC.CritBitTree.Keys;
 
-namespace TaininIPC.Client.Table;
+namespace TaininIPC.Client.Routing.Interface;
 
 /// <summary>
 /// Represents the process of adding to an <see cref="Table{T}"/>/>

@@ -3,7 +3,7 @@ using TaininIPC.CritBitTree;
 using TaininIPC.CritBitTree.Keys;
 using TaininIPC.Utils;
 
-namespace TaininIPC.Client.Table;
+namespace TaininIPC.Client.Routing;
 
 /// <summary>
 /// Represents a thread-safe mapping between <see cref="StringKey"/> names and <see cref="Int32Key"/> keys 

@@ -1,7 +1,7 @@
 ﻿using System.Buffers.Binary;
 using System.Diagnostics;
-using TaininIPC.Client.Endpoints;
-using TaininIPC.Client.Interface;
+using TaininIPC.Client.Routing.Endpoints;
+using TaininIPC.Client.Routing.Interface;
 using TaininIPC.CritBitTree;
 using TaininIPC.CritBitTree.Keys;
 using TaininIPC.Data.Frames;

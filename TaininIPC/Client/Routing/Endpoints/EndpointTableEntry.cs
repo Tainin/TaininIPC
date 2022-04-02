@@ -1,10 +1,10 @@
-﻿using TaininIPC.Client.Interface;
+﻿using TaininIPC.Client.Routing.Interface;
 using TaininIPC.CritBitTree.Keys;
 using TaininIPC.Data.Frames;
 using TaininIPC.Network.Abstract;
 using TaininIPC.Protocol;
 
-namespace TaininIPC.Client.Endpoints;
+namespace TaininIPC.Client.Routing.Endpoints;
 
 /// <summary>
 /// Represents an entry in an <see cref="EndpointTable"/>.

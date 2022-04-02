@@ -1,7 +1,7 @@
-﻿using TaininIPC.Client.Endpoints;
+﻿using TaininIPC.Client.Routing.Endpoints;
 using TaininIPC.Data.Frames;
 
-namespace TaininIPC.Client.Interface;
+namespace TaininIPC.Client.Routing.Interface;
 
 /// <summary>
 /// Provides a mechanism for routing <see cref="MultiFrame"/> instances to a handler.

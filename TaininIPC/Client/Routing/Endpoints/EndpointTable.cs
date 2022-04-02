@@ -1,11 +1,10 @@
-﻿using TaininIPC.Client.Interface;
-using TaininIPC.Client.Table;
+﻿using TaininIPC.Client.Routing.Interface;
 using TaininIPC.CritBitTree.Keys;
 using TaininIPC.Data.Frames;
 using TaininIPC.Protocol;
 using TaininIPC.Utils;
 
-namespace TaininIPC.Client.Endpoints;
+namespace TaininIPC.Client.Routing.Endpoints;
 
 /// <summary>
 /// Represents a table of <see cref="Int32Key"/> keys mapped to <see cref="EndpointTableEntry"/> entries.

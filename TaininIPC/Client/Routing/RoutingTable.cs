@@ -1,6 +1,5 @@
-﻿using TaininIPC.Client.Endpoints;
-using TaininIPC.Client.Interface;
-using TaininIPC.Client.Table;
+﻿using TaininIPC.Client.Routing.Endpoints;
+using TaininIPC.Client.Routing.Interface;
 using TaininIPC.CritBitTree.Keys;
 using TaininIPC.Data.Frames;
 using TaininIPC.Protocol;

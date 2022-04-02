@@ -1,8 +1,8 @@
-﻿using TaininIPC.Client.Interface;
+﻿using TaininIPC.Client.Routing.Interface;
 using TaininIPC.Data.Frames;
 using TaininIPC.Network.Abstract;
 
-namespace TaininIPC.Client.Endpoints;
+namespace TaininIPC.Client.Routing.Endpoints;
 
 /// <summary>
 /// Represents a function which constructs an <see cref="AbstractNetworkEndpoint"/> from an <see cref="IRouter"/> 

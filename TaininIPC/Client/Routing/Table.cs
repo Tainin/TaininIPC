@@ -1,9 +1,10 @@
 ﻿using System.Diagnostics;
+using TaininIPC.Client.Routing.Interface;
 using TaininIPC.CritBitTree;
 using TaininIPC.CritBitTree.Keys;
 using TaininIPC.Utils;
 
-namespace TaininIPC.Client.Table;
+namespace TaininIPC.Client.Routing;
 
 /// <summary>
 /// Represents a thread-safe mapping from <see cref="string"/> names and <see cref="Int32Key"/> keys to <typeparamref name="T"/> elements.

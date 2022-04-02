@@ -115,15 +115,6 @@ public sealed class Frame {
         return oldData;
     }
     /// <summary>
-    /// Gets the buffer at the first index of the <see cref="Frame"/> and moves it to the last.
-    /// </summary>
-    /// <returns>The buffer which was at the first index.</returns>
-    public ReadOnlyMemory<byte> Rotate() {
-        ReadOnlyMemory<byte> data = Pop(0);
-        Insert(data, ^1);
-        return data;
-    }
-    /// <summary>
     /// Removes the buffer at the specifed index in the <see cref="Frame"/>.
     /// </summary>
     /// <param name="index">The index of the buffer to remove.</param>

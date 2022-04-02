@@ -42,9 +42,12 @@ public sealed class EndpointTableEntry : IRouter {
     /// <param name="frame">The frame to route.</param>
     /// <param name="_"></param>
     /// <returns>An asyncronous task representing the operation.</returns>
-    public Task RouteFrame(MultiFrame frame, EndpointTableEntry? _) {
-        if (frame.TryGet(ProtocolMultiFrameKeys.RETURN_ROUTING_PATH_KEY, out Frame? returnPath))
-           returnPath.Insert(Key.Memory, 0);
-        return Router.RouteFrame(frame, this);
+    public async Task RouteFrame(MultiFrame frame, EndpointTableEntry? _) {
+        frame.PrependReturnPathIfPresent(StaticRoutingKeys.ROUTE_TO_ENDPOINT_TABLE_KEY, Key);
+        try {
+            await Router.RouteFrame(frame, this).ConfigureAwait(false);
+        } catch {
+            //TODO: How should exceptions thrown during frame routing be handled?
+        }
     }
 }

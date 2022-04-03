@@ -2,34 +2,32 @@
 using TaininIPC.Data.Frames;
 using TaininIPC.Data.Frames.Serialization;
 using TaininIPC.Data.Network;
+using TaininIPC.Network.Interface;
 
 namespace TaininIPC.Network.Abstract;
 
 /// <summary>
-/// Provides the <see langword="abstract"/> base class for network endpoint implementations.
+/// Provides an <see langword="abstract"/> base class for <see cref="INetworkEndpoint"/> implementations which serialize to <see cref="NetworkChunk"/> instances for transfer.
 /// </summary>
-public abstract class AbstractNetworkEndpoint {
+public abstract class AbstractNetworkEndpoint : INetworkEndpoint {
 
-    /// <summary>
-    /// Occurs when the status of the endpoint changes
-    /// </summary>
+    /// <inheritdoc cref="INetworkEndpoint.EndpointStatusChanged"/>
     public event EventHandler<EndpointStatusChangedEventArgs>? EndpointStatusChanged;
 
     private readonly SemaphoreSlim sendFrameSempaphore;
-    private readonly IRouter incomingFrameRouter;
     private readonly FrameDeserializer frameDeserializer;
 
-    /// <summary>
-    /// Represents the current status of the endpoint
-    /// </summary>
+    /// <inheritdoc cref="INetworkEndpoint.Status"/>
     public abstract EndpointStatus Status { get; }
+    /// <inheritdoc cref="INetworkEndpoint.IncomingFrameRouter"/>
+    public IRouter IncomingFrameRouter { get; }
 
     /// <summary>
     /// Initializes a new <see cref="AbstractNetworkEndpoint"/> given an <see cref="IRouter"/> to route frames received by the endpoint.
     /// </summary>
     /// <param name="incomingFrameRouter">The <see cref="IRouter"/> used to route received frames.</param>
     public AbstractNetworkEndpoint(IRouter incomingFrameRouter) {
-        this.incomingFrameRouter = incomingFrameRouter;
+        IncomingFrameRouter = incomingFrameRouter;
         sendFrameSempaphore = new(1, 1);
         frameDeserializer = new();
     }
@@ -44,11 +42,7 @@ public abstract class AbstractNetworkEndpoint {
     /// </summary>
     public abstract void Stop();
 
-    /// <summary>
-    /// Sends the specified <paramref name="multiFrame"/> over the network.
-    /// </summary>
-    /// <param name="multiFrame">The frame to send.</param>
-    /// <returns>An asyncronous task which represents the operation.</returns>
+    /// <inheritdoc cref="INetworkEndpoint.SendMultiFrame(MultiFrame)"/>
     public async Task SendMultiFrame(MultiFrame multiFrame) {
         await sendFrameSempaphore.WaitAsync().ConfigureAwait(false);
         try {
@@ -74,7 +68,7 @@ public abstract class AbstractNetworkEndpoint {
     /// <returns>An asyncronous task which represents the operation.</returns>
     protected async Task ApplyChunk(NetworkChunk chunk) {
         if (frameDeserializer.ApplyChunk(chunk, out MultiFrame? frame))
-            await incomingFrameRouter.RouteFrame(frame, null).ConfigureAwait(false);
+            await IncomingFrameRouter.RouteFrame(frame, null).ConfigureAwait(false);
     }
 
     /// <summary>

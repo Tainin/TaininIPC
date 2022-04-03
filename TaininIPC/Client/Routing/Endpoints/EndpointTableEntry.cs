@@ -1,7 +1,7 @@
 ﻿using TaininIPC.Client.Routing.Interface;
 using TaininIPC.CritBitTree.Keys;
 using TaininIPC.Data.Frames;
-using TaininIPC.Network.Abstract;
+using TaininIPC.Network.Interface;
 using TaininIPC.Protocol;
 
 namespace TaininIPC.Client.Routing.Endpoints;
@@ -14,7 +14,7 @@ public sealed class EndpointTableEntry : IRouter {
     /// <summary>
     /// The endpoint used to send and receive <see cref="MultiFrame"/> instances through the entry.
     /// </summary>
-    public AbstractNetworkEndpoint NetworkEndpoint { get; }
+    public INetworkEndpoint NetworkEndpoint { get; }
     /// <summary>
     /// The <see cref="IRouter"/> responsible for routing <see cref="MultiFrame"/> instances received through the entry.
     /// </summary>

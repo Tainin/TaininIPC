@@ -10,30 +10,30 @@ public interface INetworkEndpoint {
     /// <summary>
     /// The router used to route received frames.
     /// </summary>
-    IRouter IncomingFrameRouter { get; }
+    public IRouter IncomingFrameRouter { get; }
     /// <summary>
     /// Represents the current status of the endpoint
     /// </summary>
-    EndpointStatus Status { get; }
+    public EndpointStatus Status { get; }
 
     /// <summary>
     /// Occurs when the status of the endpoint changes
     /// </summary>
-    event EventHandler<EndpointStatusChangedEventArgs>? EndpointStatusChanged;
+    public event EventHandler<EndpointStatusChangedEventArgs>? EndpointStatusChanged;
 
     /// <summary>
     /// Runs lifetime services of the endpoint.
     /// </summary>
     /// <returns>An asyncronous task which represents the operation.</returns>
-    Task Run();
+    public Task Run();
     /// <summary>
     /// Sends the specified <paramref name="multiFrame"/> over the network.
     /// </summary>
     /// <param name="multiFrame">The frame to send.</param>
     /// <returns>An asyncronous task which represents the operation.</returns>
-    Task SendMultiFrame(MultiFrame multiFrame);
+    public Task SendMultiFrame(MultiFrame multiFrame);
     /// <summary>
     /// Stops running lifetime services.
     /// </summary>
-    void Stop();
+    public void Stop();
 }

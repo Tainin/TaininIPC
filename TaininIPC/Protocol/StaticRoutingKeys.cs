@@ -9,9 +9,9 @@ public static class StaticRoutingKeys {
     /// <summary>
     /// The key which routes frames to a node's endpoint table.
     /// </summary>
-    public static Int32Key ROUTE_TO_ENDPOINT_TABLE_KEY { get; } = new(-1);
+    public static Int32Key ENDPOINT_TABLE_ROUTE_KEY { get; } = new(-1);
     /// <summary>
-    /// The key which routes frames to a node's routing table.
+    /// The key which routes frames to a node's connection source table.
     /// </summary>
-    public static Int32Key ROUTE_TO_ROUTING_TABLE_KEY { get; } = new(-2);
+    public static Int32Key CONNECTION_SOURCE_TABLE_ROUTE_KEY { get; } = new(-2);
 }

@@ -30,7 +30,7 @@ public sealed class EndpointTableEntry : IRouter {
     /// <param name="key">The key which maps to the entry in it's table.</param>
     /// <param name="options">The options to use when initializing the entry.</param>
     public EndpointTableEntry(Int32Key key, EndpointTableEntryOptions options) {
-        NetworkEndpoint = options.NetworkFactory(this);
+        NetworkEndpoint = options.Connection.ToEndpoint(this);
         Router = options.Router;
         Key = key;
     }
@@ -43,7 +43,7 @@ public sealed class EndpointTableEntry : IRouter {
     /// <param name="_"></param>
     /// <returns>An asyncronous task representing the operation.</returns>
     public async Task RouteFrame(MultiFrame frame, EndpointTableEntry? _) {
-        frame.PrependReturnPathIfPresent(StaticRoutingKeys.ROUTE_TO_ENDPOINT_TABLE_KEY, Key);
+        frame.PrependReturnPathIfPresent(StaticRoutingKeys.ENDPOINT_TABLE_ROUTE_KEY, Key);
         try {
             await Router.RouteFrame(frame, this).ConfigureAwait(false);
         } catch {

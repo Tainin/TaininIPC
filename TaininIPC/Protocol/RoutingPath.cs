@@ -16,7 +16,7 @@ public static class RoutingPath {
     /// <param name="routingKey">The next routing key of the <paramref name="frame"/> if it contained a routing path.</param>
     /// <returns><see langword="true"/> if the specified <paramref name="frame"/> contained a routing path, <see langword="false"/> otherwise.</returns>
     public static bool TryGetNextRoutingKey(this MultiFrame frame, [NotNullWhen(true)] out Int32Key? routingKey) {
-        if (!frame.TryGet(ProtocolMultiFrameKeys.ROUTING_PATH_KEY, out Frame? subFrame))
+        if (!frame.TryGet(MultiFrameKeys.ROUTING_PATH_KEY, out Frame? subFrame))
             return UtilityFunctions.DefaultAndFalse(out routingKey);
         routingKey = new(subFrame.Pop(0));
         return true;
@@ -32,10 +32,10 @@ public static class RoutingPath {
     /// becomes the new first key of the return path.
     /// </remarks>
     public static void PrependReturnPathIfPresent(this MultiFrame frame, params Int32Key[] keys) {
-        if (!frame.TryGet(ProtocolMultiFrameKeys.RETURN_ROUTING_PATH_KEY, out Frame? subFrame)) return;
+        if (!frame.TryGet(MultiFrameKeys.RETURN_ROUTING_PATH_KEY, out Frame? subFrame)) return;
 
         for (int i = keys.Length - 1; i >= 0; i--)
-            subFrame.Insert(keys[i].Memory, 0);
+            subFrame.Prepend(keys[i].Memory);
     }
     /// <summary>
     /// If the specified <paramref name="frame"/> contains a routing path
@@ -44,10 +44,10 @@ public static class RoutingPath {
     /// <param name="frame">The frame to append to.</param>
     /// <param name="keys">The routing keys to append to the <paramref name="frame"/>'s routing path.</param>
     public static void AppendRoutingPathIfPresent(this MultiFrame frame, params Int32Key[] keys) {
-        if (!frame.TryGet(ProtocolMultiFrameKeys.ROUTING_PATH_KEY, out Frame? subFrame)) return;
+        if (!frame.TryGet(MultiFrameKeys.ROUTING_PATH_KEY, out Frame? subFrame)) return;
 
         int length = keys.Length;
         for (int i = 0; i < length; i++)
-            subFrame.Insert(keys[i].Memory, ^1);
+            subFrame.Append(keys[i].Memory);
     }
 }

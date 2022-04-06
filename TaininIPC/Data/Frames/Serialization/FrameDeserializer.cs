@@ -84,7 +84,7 @@ public sealed class FrameDeserializer {
             return DeserializationState.MultiFrame;
 
         if (instruction is FrameInstruction.AppendBuffer) {
-            workingFrame.Insert(chunk.Data, ^1);
+            workingFrame.Append(chunk.Data);
             return DeserializationState.Frame;
         }
 

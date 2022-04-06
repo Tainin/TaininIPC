@@ -39,7 +39,7 @@ public sealed class Frame {
     /// </summary>
     /// <param name="data">An <see cref="IEnumerable{T}"/> over the buffers to include in the new frame.</param>
     public Frame(IEnumerable<ReadOnlyMemory<byte>> data) : this() {
-        foreach (ReadOnlyMemory<byte> buffer in data) Insert(buffer, ^1);
+        foreach (ReadOnlyMemory<byte> buffer in data) Append(buffer);
     }
 
     /// <summary>
@@ -54,7 +54,16 @@ public sealed class Frame {
             }
         }
     }
-
+    /// <summary>
+    /// Appends the specified buffer to the end of the <see cref="Frame"/>.
+    /// </summary>
+    /// <param name="data">The buffer to append.</param>
+    public void Append(ReadOnlyMemory<byte> data) => Insert(data, ^1);
+    /// <summary>
+    /// Prepends the specified buffer to the begining of the <see cref="Frame"/>.
+    /// </summary>
+    /// <param name="data">The buffer to prepend.</param>
+    public void Prepend(ReadOnlyMemory<byte> data) => Insert(data, 0);
     /// <summary>
     /// Inserts the specified buffer into the <see cref="Frame"/> at the specified index.
     /// </summary>

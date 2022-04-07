@@ -15,7 +15,7 @@ public interface IConnectionSource {
     /// </summary>
     /// <param name="frame">The frame containing the connection request.</param>
     /// <returns>An asyncronous task representing the operation.</returns>
-    public Task CompleteConnectionRequest(MultiFrame frame);
+    public Task CompleteConnectionRequest(Frame frame);
     /// <summary>
     /// Gets all information needed to connect to the source from the outside encoded in a <see cref="Frame"/>.
     /// </summary>

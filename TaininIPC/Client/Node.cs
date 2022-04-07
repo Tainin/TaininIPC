@@ -31,7 +31,7 @@ public sealed class Node : IConnectionHandler {
         (endpointNameMap, routingNameMap) = (new(), new());
     }
 
-    private async Task Initialize() {
+    private async Task InitializeRoutes() {
         await routingTable.GetAddHandle(StaticRoutingKeys.ENDPOINT_TABLE_ROUTE_KEY)
             .Add(_ => endpointTable).ConfigureAwait(false);
         await routingTable.GetAddHandle(StaticRoutingKeys.CONNECTION_SOURCE_TABLE_ROUTE_KEY)

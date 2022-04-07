@@ -57,7 +57,7 @@ public class Table<T> where T : notnull {
     /// </summary>
     /// <returns>The add handle.</returns>
     /// <exception cref="OverflowException">If incrementing the available id index causes an overflow.</exception>
-    public ITableAddHandle<T> GetAddHandle() {
+    public virtual ITableAddHandle<T> GetAddHandle() {
         int assignedId = Interlocked.Increment(ref nextAvailableId);
         if (assignedId < 0) throw new OverflowException("Overflow occured while attempting to get the next available id.");
         return new AddHandle(this, new(assignedId));
@@ -68,7 +68,7 @@ public class Table<T> where T : notnull {
     /// <param name="reservedKey">The key to assign to the add handle.</param>
     /// <returns>The add handle.</returns>
     /// <exception cref="InvalidOperationException">If the <paramref name="reservedKey"/>'s reservation has already been claimed.</exception>
-    public ITableAddHandle<T> GetAddHandle(Int32Key reservedKey) {
+    public virtual ITableAddHandle<T> GetAddHandle(Int32Key reservedKey) {
         int reservation = Interlocked.CompareExchange(ref reservations[reservedKey.Id], 1, 0);
         if (reservation != 0) throw new InvalidOperationException($"The specified {nameof(reservedKey)} is already in use.");
         return new AddHandle(this, reservedKey);
@@ -98,19 +98,26 @@ public class Table<T> where T : notnull {
         return contains;
     }
     /// <summary>
+    /// Attempts to pop the entry mapped to by the given <paramref name="key"/> from the table.
+    /// </summary>
+    /// <param name="key">The key to pop from the table.</param>
+    /// <returns>An asyncronous task which completes with an <see cref="Attempt{T}"/> which represents the poped entry 
+    /// if it existed in the table.</returns>
+    public virtual async Task<Attempt<T>> TryPop(Int32Key key) {
+        await syncSemaphore.WaitAsync().ConfigureAwait(false);
+        bool popped = table.TryPop(key, out T? t);
+        if (popped && key.Id < reservations.Length) // Release reservation claim if necessary
+            Interlocked.Exchange(ref reservations[key.Id], 0);
+        syncSemaphore.Release();
+        return popped.ToAttempt(t);
+    }
+    /// <summary>
     /// Attempts to remove the entry mapped to by the given <paramref name="key"/> from the table.
     /// </summary>
     /// <param name="key">The key to remove from the table.</param>
     /// <returns>An asyncronous task which completes with <see langword="true"/> if the given <paramref name="key"/> existed in the table
     /// and was removed, <see langword="false"/> otherwise.</returns>
-    public async Task<bool> TryRemove(Int32Key key) {
-        await syncSemaphore.WaitAsync().ConfigureAwait(false);
-        bool removed = table.TryRemove(key);
-        if (removed && key.Id < reservations.Length) // Release reservation claim if necessary
-            Interlocked.Exchange(ref reservations[key.Id], 0);
-        syncSemaphore.Release();
-        return removed;
-    }
+    public async Task<bool> TryRemove(Int32Key key) => (await TryPop(key).ConfigureAwait(false)).HasResult;
     /// <summary>
     /// Clears all entries from the table.
     /// </summary>

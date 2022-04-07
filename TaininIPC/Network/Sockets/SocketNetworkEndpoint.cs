@@ -321,7 +321,7 @@ public sealed class SocketNetworkEndpoint : AbstractNetworkEndpoint {
     /// </summary>
     /// <param name="newStatus">The new status.</param>
     /// <param name="comparand">The value to compare the current status against.</param>
-    /// <returns>True if the old status was equal to <paramref name="comparand"/>. False otherwise.</returns>
+    /// <returns>True if the old status was equal to <paramref name="comparand"/>. <see langword="false"/> otherwise.</returns>
     private bool UpdateStatus(EndpointStatus newStatus, EndpointStatus comparand) {
         // CompareExchange the status
         EndpointStatus oldStatus = (EndpointStatus)Interlocked.CompareExchange(ref status, (int)newStatus, (int)comparand);

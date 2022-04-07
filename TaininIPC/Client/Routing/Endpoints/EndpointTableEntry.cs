@@ -24,15 +24,33 @@ public sealed class EndpointTableEntry : IRouter {
     /// </summary>
     public Int32Key Key { get; }
 
+    private Task? endpointRunTask;
+    private EndpointTable table;
+
+    private readonly int UNSTARTED = 0;
+    private readonly int STARTED = 1;
+    private int started = 0;
+
     /// <summary>
     /// Initializes an <see cref="EndpointTableEntry"/> from it's <paramref name="key"/> and an <paramref name="options"/> object.
     /// </summary>
     /// <param name="key">The key which maps to the entry in it's table.</param>
+    /// <param name="table">The table which contains the entry.</param>
     /// <param name="options">The options to use when initializing the entry.</param>
-    public EndpointTableEntry(Int32Key key, EndpointTableEntryOptions options) {
+    public EndpointTableEntry(Int32Key key, EndpointTable table, EndpointTableEntryOptions options) {
         NetworkEndpoint = options.Connection.ToEndpoint(this);
         Router = options.Router;
         Key = key;
+
+        this.table = table;
+    }
+
+    /// <summary>
+    /// Runs the <see cref="NetworkEndpoint"/> and holds a reference to the task representing the running endpoint.
+    /// </summary>
+    public void StartEndpoint() {
+        if (Interlocked.CompareExchange(ref started, STARTED, UNSTARTED) != UNSTARTED) return;
+        endpointRunTask = RunEndpoint();
     }
 
     /// <summary>
@@ -48,6 +66,14 @@ public sealed class EndpointTableEntry : IRouter {
             await Router.RouteFrame(frame, this).ConfigureAwait(false);
         } catch {
             //TODO: How should exceptions thrown during frame routing be handled?
+        }
+    }
+
+    private async Task RunEndpoint() {
+        try {
+            await NetworkEndpoint.Run().ConfigureAwait(false);
+        } finally {
+            await table.TryRemove(Key).ConfigureAwait(false);
         }
     }
 }

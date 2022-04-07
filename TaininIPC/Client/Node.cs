@@ -42,6 +42,6 @@ public sealed class Node : IConnectionHandler {
     public async Task HandleConnection(IConnection connection) =>
         await endpointTable.GetAddHandle().Add(key => {
             EndpointTableEntryOptions entryOptions = new(connection, routingTable);
-            return new EndpointTableEntry(key, entryOptions);
+            return new EndpointTableEntry(key, endpointTable, entryOptions);
         });
 }

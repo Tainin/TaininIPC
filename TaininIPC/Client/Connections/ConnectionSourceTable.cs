@@ -27,10 +27,10 @@ public sealed class ConnectionSourceTable : Table<IConnectionSource>, IRouter {
     /// <param name="_"></param>
     /// <returns>An asyncronous task representing the operation.</returns>
     public async Task RouteFrame(MultiFrame frame, EndpointTableEntry? _) {
-        if (!frame.TryGetNextRoutingKey(out Int32Key? routingKey)) return;
         if (!frame.TryGet(MultiFrameKeys.CONNECTION_INFO_KEY, out Frame? subFrame)) return;
 
-        Attempt<IConnectionSource> attempt = await TryGet(routingKey).ConfigureAwait(false);
+        Int32Key connectionSourceTableKey = new(subFrame.Get(^1));
+        Attempt<IConnectionSource> attempt = await TryGet(connectionSourceTableKey).ConfigureAwait(false);
         if (attempt.TryResult(out IConnectionSource? connectionSource))
             await connectionSource.CompleteConnectionRequest(subFrame).ConfigureAwait(false);
     }

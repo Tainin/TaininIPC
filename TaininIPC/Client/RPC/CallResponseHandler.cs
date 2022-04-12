@@ -13,6 +13,16 @@ namespace TaininIPC.Client.RPC;
 /// Represnets a channel for RPC style calls over the network.
 /// </summary>
 public sealed class CallResponseHandler : IRouter {
+
+    private sealed class CallInfo {
+        public ResponseHandle ResponseHandle { get; }
+        public int Index { get; }
+        public BasicKey ResponseIdentifier { get; }
+
+        public CallInfo(ResponseHandle responseHandle, int index, BasicKey responseIdentifier) =>
+            (ResponseHandle, Index, ResponseIdentifier) = (responseHandle, index, responseIdentifier);
+    }
+
     private readonly CritBitTree<BasicKey, ResponseHandle> responseHandlers;
 
     private readonly Queue<int> indexRecycling;
@@ -58,18 +68,18 @@ public sealed class CallResponseHandler : IRouter {
     /// <param name="frame">The frame to send as the call data.</param>
     /// <returns>An asyncronous task which completes with a <see cref="MultiFrame"/> represening the results of the call.</returns>
     public async Task<MultiFrame> Call(EndpointTableEntry endpointTableEntry, MultiFrame frame) {
-        (ResponseHandle handle, int index, BasicKey responseIdentifier) = await SetupResponseHandler().ConfigureAwait(false);
+        CallInfo callInfo = await SetupCallHandler().ConfigureAwait(false);
 
-        frame.SetResponseIdentifier(responseIdentifier);
+        frame.SetResponseIdentifier(callInfo.ResponseIdentifier);
         await endpointTableEntry.NetworkEndpoint.SendMultiFrame(frame).ConfigureAwait(false);
-        MultiFrame response = await handle.WhenResponse().ConfigureAwait(false);
+        MultiFrame response = await callInfo.ResponseHandle.WhenResponse().ConfigureAwait(false);
 
-        await TearDownResponseHandler(handle, index, responseIdentifier).ConfigureAwait(false);
+        await TeardownCallHandler(callInfo).ConfigureAwait(false);
 
         return response;
     }
 
-    private async Task<(ResponseHandle handle, int index, BasicKey responseIdentifier)> SetupResponseHandler() {
+    private async Task<CallInfo> SetupCallHandler() {
         await syncSemaphore.WaitAsync().ConfigureAwait(false);
         if (!handleRecycling.TryDequeue(out ResponseHandle? handle) || handle is null) handle = new();
         if (!indexRecycling.TryDequeue(out int index)) index = Interlocked.Increment(ref nextFreshIndex);
@@ -86,19 +96,19 @@ public sealed class CallResponseHandler : IRouter {
         Debug.Assert(added, $"{nameof(CallResponseHandler)}.{nameof(Call)} should never fail " +
             $"to add {nameof(handle)} to {nameof(responseHandlers)}");
         
-        return (handle, index, responseIdentifier);
+        return new(handle, index, responseIdentifier);
     }
-    private async Task TearDownResponseHandler(ResponseHandle handle, int index, BasicKey responseKey) {
+    private async Task TeardownCallHandler(CallInfo callInfo) {
         await syncSemaphore.WaitAsync().ConfigureAwait(false);
 
-        bool removed = responseHandlers.TryRemove(responseKey);
+        bool removed = responseHandlers.TryRemove(callInfo.ResponseIdentifier);
 
-        handleRecycling.Enqueue(handle);
-        indexRecycling.Enqueue(index);
+        handleRecycling.Enqueue(callInfo.ResponseHandle);
+        indexRecycling.Enqueue(callInfo.Index);
 
         syncSemaphore.Release();
 
         Debug.Assert(removed, $"{nameof(CallResponseHandler)}.{nameof(Call)} should never fail " +
-            $"to remove {nameof(handle)} from {nameof(responseHandlers)}");
+            $"to remove {nameof(callInfo.ResponseHandle)} from {nameof(responseHandlers)}");
     }
 }

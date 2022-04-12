@@ -12,15 +12,25 @@ namespace TaininIPC.Client.Routing;
 /// <typeparam name="T">The type of elements to store in the table.</typeparam>
 public class Table<T> where T : notnull {
     private class AddHandle : ITableAddHandle<T> {
+
+        private static readonly int READY = 0;
+        private static readonly int ADDED = 1;
+
         public Int32Key Key { get; }
 
         private readonly Table<T> container;
 
-        public AddHandle(Table<T> table, Int32Key key) => (container, Key) = (table, key);
+        private int status;
 
-        public async Task Add(Func<Int32Key, T> entryFactory) {
+        public AddHandle(Table<T> table, Int32Key key) => (container, Key, status) = (table, key, READY);
+
+        public Task Add(Func<Int32Key, T> entryFactory) => Add(entryFactory(Key));
+
+        public async Task Add(T entry) {
+            if (Interlocked.CompareExchange(ref status, ADDED, READY) != READY)
+                throw new InvalidOperationException("Cannot add using an add handle which has already been used to add an entry.");
             await container.syncSemaphore.WaitAsync().ConfigureAwait(false);
-            bool added = container.table.TryAdd(Key, entryFactory(Key));
+            bool added = container.table.TryAdd(Key, entry);
             Debug.Assert(added);
             container.syncSemaphore.Release();
         }

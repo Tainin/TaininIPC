@@ -18,12 +18,11 @@ public sealed class EndpointTable : Table<EndpointTableEntry>, IRouter {
 
         public Int32Key Key => innerAddHandle.Key;
 
-        public Task Add(Func<Int32Key, EndpointTableEntry> entryFactory) =>
-            innerAddHandle.Add(key => {
-                EndpointTableEntry entry = entryFactory(key);
-                entry.StartEndpoint();
-                return entry;
-            });
+        public Task Add(Func<Int32Key, EndpointTableEntry> entryFactory) => Add(entryFactory(Key));
+        public async Task Add(EndpointTableEntry entry) {
+            await innerAddHandle.Add(entry).ConfigureAwait(false);
+            entry.StartEndpoint();
+        }
     }
 
     /// <summary>

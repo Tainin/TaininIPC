@@ -9,7 +9,7 @@ public sealed class Frame {
     /// <summary>
     /// Represents a single buffer in a <see cref="Frame"/>.
     /// </summary>
-    private sealed class Node { 
+    private sealed class Node {
         public Node? Previous { get; set; }
         public Node? Next { get; set; }
         public ReadOnlyMemory<byte> Data { get; set; }
@@ -75,20 +75,7 @@ public sealed class Frame {
         // Initialize the new node
         Node newNode = new(data);
 
-        // Get the node to start at and the traversal function based on the direction of the index
-        (Node prev, Func<Node, Node?> traverse) = index.IsFromEnd ?
-            (postEnd, (Func<Node, Node?>)(node => node.Previous)) :
-            (preStart, node => node.Next);
-
-        // Traverse the prev node to the position before the insert location
-        int limit = index.Value;
-        for (int i = 0; i < limit; i++)
-            prev = traverse(prev) ?? 
-                throw new IndexOutOfRangeException($"Attempted to insert outside the range of the {nameof(Frame)}");
-
-        // Get the node after the insert location
-        Node next = prev.Next ??
-            throw new IndexOutOfRangeException($"Attempted to insert outside the range of the {nameof(Frame)}");
+        (Node prev, Node next) = GetInsertPosition(index);
 
         // Update the length
         Length++;
@@ -97,6 +84,37 @@ public sealed class Frame {
         (newNode.Next, newNode.Previous) = (next, prev);
         next.Previous = newNode;
         prev.Next = newNode;
+    }
+    /// <summary>
+    /// Inserts all buffers from the specified frame into the <see cref="Frame"/> starting at the specified index.
+    /// </summary>
+    /// <param name="from">The frame to get the buffers from.</param>
+    /// <param name="index">The index to start inserting buffers at.</param>
+    /// <remarks>The <paramref name="from"/> frame will be empty on exit from this method.</remarks>
+    public void Insert(Frame from, Index index) {
+        if (from.IsEmpty()) return;
+        Insert(from, index, 0, ^1);
+    }
+    /// <summary>
+    /// Inserts all buffers from the spcified frame from the specified <paramref name="first"/> index to the specified 
+    /// <paramref name="last"/> index into the <see cref="Frame"/> starting at the specified index.
+    /// </summary>
+    /// <param name="from">The frame to get the buffers from.</param>
+    /// <param name="index">The index to start inserting buffers at.</param>
+    /// <param name="first">The index of the first buffer in <paramref name="from"/> to take.</param>
+    /// <param name="last">The index of the last buffer in <paramref name="from"/> to take.</param>
+    /// <remarks>The specified range of buffers will be removed from the <paramref name="from"/> frame.</remarks>
+    public void Insert(Frame from, Index index, Index first, Index last) {
+        (Node prev, Node next) = GetInsertPosition(index);
+
+        Node firstNode = from.Find(first, false);
+        Node lastNode = from.Find(last, false);
+
+        prev.Next = firstNode;
+        firstNode.Previous = prev;
+
+        next.Previous = lastNode;
+        lastNode.Next = next;
     }
     /// <summary>
     /// Gets the buffer at the specified index in the <see cref="Frame"/>.
@@ -116,7 +134,7 @@ public sealed class Frame {
     /// <param name="index">The index of the buffer to get and replace.</param>
     /// <param name="data">Replaces the buffer at the specified index.</param>
     /// <returns>The buffer which was at the specifed index.</returns>
-    public ReadOnlyMemory<byte> Swap(Index index, ReadOnlyMemory<byte> data) { 
+    public ReadOnlyMemory<byte> Swap(Index index, ReadOnlyMemory<byte> data) {
         Node node = Find(index, remove: false);
         ReadOnlyMemory<byte> oldData = node.Data;
 
@@ -174,5 +192,24 @@ public sealed class Frame {
 
         // Return the found node.
         return curr;
+    }
+
+    private (Node prev, Node next) GetInsertPosition(Index index) {
+        // Get the node to start at and the traversal function based on the direction of the index
+        (Node prev, Func<Node, Node?> traverse) = index.IsFromEnd ?
+            (postEnd, (Func<Node, Node?>)(node => node.Previous)) :
+            (preStart, node => node.Next);
+
+        // Traverse the prev node to the position before the insert location
+        int limit = index.Value;
+        for (int i = 0; i < limit; i++)
+            prev = traverse(prev) ??
+                throw new IndexOutOfRangeException($"Attempted to insert outside the range of the {nameof(Frame)}");
+
+        // Get the node after the insert location
+        Node next = prev.Next ??
+            throw new IndexOutOfRangeException($"Attempted to insert outside the range of the {nameof(Frame)}");
+
+        return (prev, next);
     }
 }

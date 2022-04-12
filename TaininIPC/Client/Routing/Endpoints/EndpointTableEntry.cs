@@ -24,7 +24,7 @@ public sealed class EndpointTableEntry : IRouter {
     /// </summary>
     public Int32Key Key { get; }
 
-    private EndpointTable table;
+    private readonly EndpointTable table;
 
     private static readonly int UNSTARTED = 0;
     private static readonly int STARTED = 1;

@@ -14,4 +14,8 @@ public static class StaticRoutingKeys {
     /// The key which routes frames to a node's connection source table.
     /// </summary>
     public static Int32Key CONNECTION_SOURCE_TABLE_ROUTE_KEY { get; } = new(1);
+    /// <summary>
+    /// The key which routes frames to a node's path translator.
+    /// </summary>
+    public static Int32Key PATH_TRANSLATION_ROUTE_KEY { get; } = new(2);
 }

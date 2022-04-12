@@ -24,12 +24,11 @@ public sealed class EndpointTableEntry : IRouter {
     /// </summary>
     public Int32Key Key { get; }
 
-    private Task? endpointRunTask;
     private EndpointTable table;
 
     private readonly int UNSTARTED = 0;
     private readonly int STARTED = 1;
-    private int started = 0;
+    private int started = UNSTARTED;
 
     /// <summary>
     /// Initializes an <see cref="EndpointTableEntry"/> from it's <paramref name="key"/> and an <paramref name="options"/> object.
@@ -50,7 +49,7 @@ public sealed class EndpointTableEntry : IRouter {
     /// </summary>
     public void StartEndpoint() {
         if (Interlocked.CompareExchange(ref started, STARTED, UNSTARTED) != UNSTARTED) return;
-        endpointRunTask = RunEndpoint();
+        _ = RunEndpoint();
     }
 
     /// <summary>

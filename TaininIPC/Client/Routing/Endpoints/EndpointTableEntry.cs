@@ -26,8 +26,8 @@ public sealed class EndpointTableEntry : IRouter {
 
     private EndpointTable table;
 
-    private readonly int UNSTARTED = 0;
-    private readonly int STARTED = 1;
+    private static readonly int UNSTARTED = 0;
+    private static readonly int STARTED = 1;
     private int started = UNSTARTED;
 
     /// <summary>

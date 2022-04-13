@@ -15,13 +15,22 @@ namespace TaininIPC.Client.Connections;
 /// Represents a source of new connection attempts through a <see cref="Socket"/>.
 /// </summary>
 public sealed class SocketConnectionSource : IConnectionSource {
-    private sealed class Connection : IConnection {
+    /// <summary>
+    /// Represents connections produced by a <see cref="SocketConnectionSource"/>
+    /// </summary>
+    public sealed class Connection : IConnection {
         private readonly Socket socket;
         private readonly TimeoutOptions timeoutOptions;
 
+        /// <summary>
+        /// Initializes a new <see cref="Connection"/> from the given <paramref name="socket"/> and <paramref name="timeoutOptions"/>.
+        /// </summary>
+        /// <param name="socket">The socket to base the connection on.</param>
+        /// <param name="timeoutOptions">The timeout options to use when creating the <see cref="SocketNetworkEndpoint"/>.</param>
         public Connection(Socket socket, TimeoutOptions timeoutOptions) =>
             (this.socket, this.timeoutOptions) = (socket, timeoutOptions);
 
+        /// <inheritdoc cref="IConnection.ToEndpoint(IRouter)"/>
         public INetworkEndpoint ToEndpoint(IRouter incomingFrameRouter) =>
             new SocketNetworkEndpoint(socket, incomingFrameRouter, timeoutOptions);
     }

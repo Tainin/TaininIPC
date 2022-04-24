@@ -32,6 +32,7 @@ public class Table<T> where T : notnull {
             await container.syncSemaphore.WaitAsync().ConfigureAwait(false);
             bool added = container.table.TryAdd(Key, entry);
             Debug.Assert(added);
+            container.OnAdded(entry);
             container.syncSemaphore.Release();
         }
     }
@@ -67,7 +68,7 @@ public class Table<T> where T : notnull {
     /// </summary>
     /// <returns>The add handle.</returns>
     /// <exception cref="OverflowException">If incrementing the available id index causes an overflow.</exception>
-    public virtual ITableAddHandle<T> GetAddHandle() {
+    public ITableAddHandle<T> GetAddHandle() {
         int assignedId = Interlocked.Increment(ref nextAvailableId);
         if (assignedId < 0) throw new OverflowException("Overflow occured while attempting to get the next available id.");
         return new AddHandle(this, new(assignedId));
@@ -78,7 +79,7 @@ public class Table<T> where T : notnull {
     /// <param name="reservedKey">The key to assign to the add handle.</param>
     /// <returns>The add handle.</returns>
     /// <exception cref="InvalidOperationException">If the <paramref name="reservedKey"/>'s reservation has already been claimed.</exception>
-    public virtual ITableAddHandle<T> GetAddHandle(Int32Key reservedKey) {
+    public ITableAddHandle<T> GetAddHandle(Int32Key reservedKey) {
         int reservation = Interlocked.CompareExchange(ref reservations[reservedKey.Id], 1, 0);
         if (reservation != 0) throw new InvalidOperationException($"The specified {nameof(reservedKey)} is already in use.");
         return new AddHandle(this, reservedKey);
@@ -113,11 +114,14 @@ public class Table<T> where T : notnull {
     /// <param name="key">The key to pop from the table.</param>
     /// <returns>An asyncronous task which completes with an <see cref="Attempt{T}"/> which represents the poped entry 
     /// if it existed in the table.</returns>
-    public virtual async Task<Attempt<T>> TryPop(Int32Key key) {
+    public async Task<Attempt<T>> TryPop(Int32Key key) {
         await syncSemaphore.WaitAsync().ConfigureAwait(false);
         bool popped = table.TryPop(key, out T? t);
+
+        if (popped) OnRemoved(t!);
         if (popped && key.Id < reservations.Length) // Release reservation claim if necessary
             Interlocked.Exchange(ref reservations[key.Id], 0);
+
         syncSemaphore.Release();
         return popped.ToAttempt(t);
     }
@@ -134,7 +138,20 @@ public class Table<T> where T : notnull {
     /// <returns>An asyncronous task representing the operation.</returns>
     public async Task Clear() {
         await syncSemaphore.WaitAsync().ConfigureAwait(false);
-        table.Clear();
+        foreach (Int32Key key in table.Keys)
+            if (table.TryPop(key, out T? entry))
+                OnRemoved(entry!);
         syncSemaphore.Release();
     }
+
+    /// <summary>
+    /// Performs any necessary operations on the given <paramref name="entry"/> as it is added to the table.
+    /// </summary>
+    /// <param name="entry">The entry which was added to the table.</param>
+    protected virtual void OnAdded(T entry) { }
+    /// <summary>
+    /// Performs any necessary operations on the given <paramref name="entry"/> as it is removed from the table.
+    /// </summary>
+    /// <param name="entry">The entry which was removed from the table.</param>
+    protected virtual void OnRemoved(T entry) { }
 }

@@ -17,25 +17,24 @@ public sealed class Node : IConnectionHandler {
 
     private readonly EndpointTable endpointTable;
     private readonly RoutingTable routingTable;
-    private readonly ConnectionSourceTable connectionSourceTable;
 
     private readonly NameMap endpointNameMap;
     private readonly NameMap routingNameMap;
+    private ConnectionSourceSet connectionSources = null!;
 
     private Node() {
         endpointTable = new(ENDPOINT_TABLE_RESERVED_COUNT);
         routingTable = new(ROUTING_TABLE_RESERVED_COUNT);
 
-        connectionSourceTable = new(CONNECTION_SOURCE_TABLE_RESERVED_COUNT);
 
         (endpointNameMap, routingNameMap) = (new(), new());
     }
 
     private async Task InitializeRoutes() {
         await routingTable.GetAddHandle(StaticRoutingKeys.ENDPOINT_TABLE_ROUTE_KEY)
-            .Add(_ => endpointTable).ConfigureAwait(false);
+            .Add(endpointTable).ConfigureAwait(false);
         await routingTable.GetAddHandle(StaticRoutingKeys.CONNECTION_SOURCE_TABLE_ROUTE_KEY)
-            .Add(_ => connectionSourceTable).ConfigureAwait(false);
+            .Add(connectionSources).ConfigureAwait(false);
     }
 
     /// <inheritdoc cref="IConnectionHandler.HandleConnection(IConnection)"/>
